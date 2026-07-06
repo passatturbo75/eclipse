@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>PROJETO ECLIPSE: O Último Sinal</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg-void:#04060a;--bg-deep:#080d14;--bg-panel:#0c121b;--bg-card:#111824;
+  --border-dim:#1a2332;--border-mid:#26334a;--border-bright:#3a4a6a;
+  --neon-cyan:#00e5ff;--neon-amber:#ffb020;--neon-red:#ff3b5c;--neon-violet:#a855f7;--neon-green:#22c55e;
+  --text-primary:#dfe7f2;--text-secondary:#8a9bb5;--text-muted:#5a6a82;--text-dim:#3a4658;
+  --font-ui:'Rajdhani',sans-serif;--font-mono:'Share Tech Mono',monospace;--font-display:'Orbitron',sans-serif;--font-hand:'Space Mono',monospace;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html{width:100%;height:100%;background:var(--bg-void)}
+body{width:100%;height:100%;background:var(--bg-void);font-family:var(--font-ui);color:var(--text-primary);overflow:hidden;position:fixed;top:0;left:0}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;-webkit-tap-highlight-color:transparent}
+input{font-family:inherit}
+
+/* Scanlines — reduzido para performance mobile */
+#scanlines{position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,rgba(0,229,255,0.015) 0px,rgba(0,229,255,0.015) 1px,transparent 1px,transparent 4px);mix-blend-mode:overlay;will-change:auto;contain:strict}
+#scanlines::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,0.45) 100%)}
+
+/* Loading */
+#loading-overlay{position:fixed;inset:0;background:var(--bg-void);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:24px;transition:opacity .6s}
+#loading-overlay.hidden{opacity:0;pointer-events:none}
+.loading-logo{font-family:var(--font-display);font-weight:900;letter-spacing:6px;color:var(--neon-cyan);font-size:clamp(12px,3.5vw,18px);text-shadow:0 0 20px var(--neon-cyan);text-align:center}
+.loading-bar-wrap{width:min(320px,80vw);height:3px;background:var(--bg-panel);border:1px solid var(--border-dim);position:relative;overflow:hidden}
+.loading-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--neon-cyan),var(--neon-violet));box-shadow:0 0 10px var(--neon-cyan);transition:width .3s}
+.loading-text{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);letter-spacing:2px;text-align:center}
+
+/* Notification — BUG FIX: adaptado para mobile */
+#notification{position:fixed;top:max(16px, var(--safe-top));left:50%;transform:translateX(-50%) translateY(-120px);background:var(--bg-panel);border:1px solid var(--neon-cyan);border-left:3px solid var(--neon-cyan);padding:12px 16px;width:calc(100% - 32px);max-width:420px;z-index:9998;box-shadow:0 0 30px rgba(0,229,255,0.3);transition:transform .4s cubic-bezier(.4,0,.2,1);border-radius:4px}
+#notification.show{transform:translateX(-50%) translateY(0)}
+.notif-header{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--neon-cyan);letter-spacing:1.5px;margin-bottom:5px}
+.notif-text{font-size:13px;color:var(--text-primary);line-height:1.4}
+
+/* Modal — BUG FIX: scroll correto em mobile */
+#modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9997;display:none;align-items:flex-end;justify-content:center;padding:0}
+#modal-overlay.show{display:flex;animation:fadeIn .3s}
+.modal-box{background:var(--bg-panel);border:1px solid var(--border-bright);border-bottom:none;width:100%;max-width:600px;padding:24px 24px max(24px, var(--safe-bottom));position:relative;box-shadow:0 -4px 24px rgba(0,229,255,0.15);border-radius:16px 16px 0 0;max-height:85vh;overflow-y:auto;animation:slideUp .3s ease;will-change:transform}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-clue-badge{display:inline-block;background:var(--neon-cyan);color:var(--bg-void);font-family:var(--font-mono);font-size:10px;padding:4px 10px;letter-spacing:2px;font-weight:700;margin-bottom:12px;border-radius:2px}
+.modal-title{font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--neon-cyan);margin-bottom:12px;letter-spacing:1px}
+.modal-text{font-size:14px;line-height:1.6;color:var(--text-primary);margin-bottom:20px;white-space:pre-wrap}
+.modal-close{background:transparent;border:1px solid var(--border-bright);color:var(--text-primary);padding:12px 24px;font-family:var(--font-mono);font-size:11px;letter-spacing:2px;transition:all .2s;width:100%;border-radius:4px}
+.modal-close:active{background:var(--neon-cyan);color:var(--bg-void);border-color:var(--neon-cyan)}
+
+/* Screens */
+.screen{position:fixed;inset:0;display:none;overflow:hidden}
+.screen.active{display:flex}
+
+/* ─── INTRO ─── */
+#screen-intro{flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#0a1220 0%,var(--bg-void) 70%);padding:24px;overflow-y:auto}
+.intro-logo{max-width:500px;width:100%;text-align:center}
+.intro-badge{display:inline-block;font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--neon-amber);border:1px solid var(--neon-amber);padding:5px 12px;margin-bottom:24px}
+.intro-title{font-family:var(--font-display);font-size:clamp(36px,10vw,72px);font-weight:900;letter-spacing:4px;color:var(--text-primary);text-shadow:0 0 30px rgba(0,229,255,0.5);margin-bottom:6px;animation:glitch 4s infinite}
+.intro-subtitle{font-family:var(--font-display);font-size:clamp(11px,2.5vw,18px);font-weight:400;letter-spacing:10px;color:var(--neon-cyan);margin-bottom:20px}
+.intro-divider{width:80px;height:2px;background:linear-gradient(90deg,transparent,var(--neon-cyan),transparent);margin:0 auto 24px}
+.intro-warning{font-size:13px;line-height:1.7;color:var(--text-secondary);background:rgba(255,59,92,0.08);border:1px solid rgba(255,59,92,0.3);border-left:3px solid var(--neon-red);padding:14px 16px;margin-bottom:24px;text-align:left;border-radius:2px}
+.intro-warning strong{color:var(--neon-red)}
+.intro-btn{background:transparent;border:1px solid var(--neon-cyan);color:var(--neon-cyan);font-family:var(--font-mono);font-size:12px;letter-spacing:3px;padding:14px 28px;font-weight:700;transition:all .3s;border-radius:4px}
+.intro-btn:active{background:var(--neon-cyan);color:var(--bg-void);box-shadow:0 0 40px var(--neon-cyan)}
+.intro-classification{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:3px;margin-top:20px}
+@keyframes glitch{0%,100%{text-shadow:0 0 30px rgba(0,229,255,0.5)}50%{text-shadow:0 0 30px rgba(0,229,255,0.5),3px 0 0 rgba(255,59,92,0.6),-3px 0 0 rgba(0,229,255,0.6)}}
+
+/* ─── BRIEFING ─── */
+#screen-briefing{flex-direction:column;background:var(--bg-deep);overflow:hidden}
+.briefing-header{padding:16px;border-bottom:1px solid var(--border-dim);flex-shrink:0;padding-top:max(16px, var(--safe-top))}
+.briefing-badge{font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--neon-cyan);margin-bottom:6px}
+.briefing-title{font-family:var(--font-display);font-size:20px;font-weight:700;letter-spacing:1px}
+.briefing-body{flex:1;overflow-y:auto;padding:16px;padding-bottom:max(16px, var(--safe-bottom))}
+.case-file{background:var(--bg-panel);border:1px solid var(--border-mid);padding:20px;position:relative;margin-bottom:16px;border-radius:2px}
+.case-stamp{display:inline-block;font-family:var(--font-mono);font-size:8px;color:var(--neon-red);border:1px solid var(--neon-red);padding:3px 8px;letter-spacing:2px;margin-bottom:12px}
+/* BUG FIX: layout da foto em coluna no mobile */
+.case-photo-area{display:flex;flex-direction:column;gap:16px;margin-bottom:20px}
+.victim-photo{background:linear-gradient(135deg,#1a2540,#0f1828);border:1px solid var(--border-bright);text-align:center;padding:16px 8px;display:flex;flex-direction:row;align-items:center;gap:16px}
+.victim-photo-inner{font-size:52px;flex-shrink:0}
+.victim-photo-label{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:2px}
+.case-info{display:flex;flex-direction:column;gap:10px}
+.case-field{border-bottom:1px dashed var(--border-dim);padding-bottom:8px}
+.case-field-label{font-family:var(--font-mono);font-size:9px;color:var(--text-muted);letter-spacing:2px;margin-bottom:3px}
+.case-field-value{font-size:14px;font-weight:600}
+.case-field-value.critical{color:var(--neon-red)}
+.case-divider{height:1px;background:var(--border-dim);margin:16px 0}
+.case-section-title{font-family:var(--font-mono);font-size:10px;color:var(--neon-cyan);letter-spacing:2px;margin-bottom:10px}
+.case-text{font-size:13px;line-height:1.7;color:var(--text-secondary)}
+.objective-list{list-style:none;padding:0}
+.objective-list li{padding:7px 0 7px 20px;position:relative;font-size:13px;color:var(--text-secondary)}
+.objective-list li::before{content:"▸";position:absolute;left:0;color:var(--neon-cyan)}
+.briefing-start-btn{display:block;width:100%;background:linear-gradient(90deg,transparent,rgba(0,229,255,0.1),transparent);border:1px solid var(--neon-cyan);color:var(--neon-cyan);padding:16px;font-family:var(--font-mono);font-size:12px;letter-spacing:3px;transition:all .3s;border-radius:4px;margin-top:16px}
+.briefing-start-btn:active{background:var(--neon-cyan);color:var(--bg-void)}
+
+/* ─── MAIN ─── */
+#screen-main{flex-direction:column;background:var(--bg-void)}
+
+/* Top bar mobile */
+.top-bar{min-height:52px;height:calc(52px + var(--safe-top));background:var(--bg-panel);border-bottom:1px solid var(--border-dim);display:flex;align-items:flex-end;padding:0 12px 8px;gap:10px;flex-shrink:0;padding-top:var(--safe-top)}
+.top-bar-logo{font-family:var(--font-display);font-weight:900;letter-spacing:2px;color:var(--neon-cyan);font-size:13px}
+.top-bar-progress-wrap{flex:1;max-width:180px}
+.top-bar-progress-label{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:1px;margin-bottom:3px}
+.top-bar-progress-bar{height:4px;background:var(--bg-deep);border:1px solid var(--border-dim);overflow:hidden;border-radius:2px}
+.top-bar-progress-fill{height:100%;background:linear-gradient(90deg,var(--neon-cyan),var(--neon-violet));transition:width .5s;box-shadow:0 0 8px var(--neon-cyan)}
+.top-bar-clues{font-family:var(--font-mono);font-size:10px;color:var(--neon-amber);letter-spacing:1px;margin-left:auto;white-space:nowrap}
+.top-bar-time{font-family:var(--font-mono);font-size:12px;color:var(--neon-cyan);letter-spacing:1px}
+
+/* Main container — coluna full-width no mobile */
+.main-container{display:flex;flex:1;overflow:hidden;flex-direction:column}
+
+/* Bottom nav substituindo sidebar */
+.bottom-nav{height:60px;background:var(--bg-panel);border-top:1px solid var(--border-dim);display:flex;align-items:stretch;flex-shrink:0;padding-bottom:var(--safe-bottom)}
+.nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 0;cursor:pointer;transition:all .2s;border-top:2px solid transparent;flex:1;position:relative}
+.nav-item:active{background:var(--bg-card)}
+.nav-item.active{border-top-color:var(--neon-cyan);background:rgba(0,229,255,0.05)}
+.nav-icon{font-size:20px;line-height:1}
+.nav-label{font-size:9px;font-weight:500;letter-spacing:.5px;color:var(--text-muted)}
+.nav-item.active .nav-label{color:var(--neon-cyan)}
+.nav-badge{position:absolute;top:4px;right:calc(50% - 16px);background:var(--neon-red);color:#fff;font-family:var(--font-mono);font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;animation:pulse 1.5s infinite}
+.nav-badge.dim{background:var(--bg-deep);color:var(--text-secondary);border:1px solid var(--border-mid);animation:none}
+@keyframes pulse{50%{opacity:.5}}
+
+/* Main content */
+.main-content{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.content-panel{display:none;flex:1;flex-direction:column;overflow:hidden}
+.content-panel.active{display:flex}
+
+/* ─── DASHBOARD ─── */
+#panel-dashboard{padding:16px;overflow-y:auto}
+#panel-dashboard.active{display:block}
+.dashboard-welcome h2{font-family:var(--font-display);font-size:18px;letter-spacing:1px;margin-bottom:2px}
+.dashboard-welcome p{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:1px;margin-bottom:16px}
+.dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-card{background:var(--bg-panel);border:1px solid var(--border-dim);border-top:2px solid var(--accent-color,var(--neon-cyan));padding:14px 12px;cursor:pointer;transition:all .25s;border-radius:2px}
+.stat-card:active{transform:scale(.98)}
+.stat-card-label{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:1.5px;margin-bottom:8px}
+.stat-card-value{font-family:var(--font-display);font-size:28px;font-weight:700;color:var(--accent-color,var(--neon-cyan));line-height:1}
+.stat-card-sub{font-size:10px;color:var(--text-secondary);margin-top:6px;line-height:1.3}
+.timeline-card{background:var(--bg-panel);border:1px solid var(--border-dim);padding:16px;border-radius:2px}
+.timeline-card-title{font-family:var(--font-mono);font-size:10px;color:var(--neon-cyan);letter-spacing:2px;margin-bottom:14px}
+.timeline-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px dashed var(--border-dim)}
+.timeline-item:last-child{border-bottom:none}
+.timeline-dot{width:10px;height:10px;border-radius:50%;background:var(--border-mid);margin-top:3px;flex-shrink:0}
+.timeline-item.done .timeline-dot{background:var(--neon-green);box-shadow:0 0 8px var(--neon-green)}
+.timeline-item.active .timeline-dot{background:var(--neon-cyan);box-shadow:0 0 12px var(--neon-cyan);animation:pulse 1.5s infinite}
+.timeline-info{flex:1}
+.timeline-label{font-size:12px;font-weight:600;margin-bottom:2px}
+.timeline-sub{font-family:var(--font-mono);font-size:9px;color:var(--text-muted);letter-spacing:1px}
+
+/* ─── PHONE PANEL ─── */
+/* BUG FIX: phone frame ocupa full screen em mobile */
+#panel-phone{flex:1;background:var(--bg-deep);overflow:hidden;display:none}
+#panel-phone.active{display:flex;flex-direction:column}
+.phone-frame{flex:1;width:100%;max-width:100%;background:#000;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.phone-status-bar{height:28px;background:#0a0a0c;display:flex;justify-content:space-between;align-items:center;padding:0 20px;font-family:var(--font-mono);font-size:11px;color:#fff;flex-shrink:0}
+.phone-status-icons{display:flex;gap:6px;font-size:10px}
+.phone-screen{flex:1;display:none;flex-direction:column;overflow:hidden}
+.phone-screen.active{display:flex}
+
+/* Lock screen */
+#phone-lock{background:linear-gradient(180deg,#0a0a1a 0%,#1a0a2e 50%,#0a0518 100%);padding:16px 16px max(16px, var(--safe-bottom));overflow-y:auto}
+.lock-time{font-family:var(--font-display);font-size:56px;font-weight:300;color:#fff;text-align:center;margin-top:8px;letter-spacing:-2px}
+.lock-date{text-align:center;font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:14px}
+.lock-notifications{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.lock-notif{background:rgba(255,255,255,0.1);border-radius:12px;padding:9px 12px}
+.lock-notif-header{display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,0.6);letter-spacing:1px;margin-bottom:3px;font-weight:600}
+.lock-notif-text{font-size:11px;color:#fff;line-height:1.3}
+.lock-pin-area{padding:10px 0}
+.lock-pin-display{display:flex;justify-content:center;gap:14px;margin-bottom:12px}
+.lock-pin-dot{width:12px;height:12px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.5);transition:all .2s}
+.lock-pin-dot.filled{background:#fff;border-color:#fff}
+.lock-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 20px}
+.lock-key{aspect-ratio:1;background:rgba(255,255,255,0.14);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s;flex-direction:column;max-width:70px;margin:0 auto;width:100%}
+.lock-key:active{background:rgba(255,255,255,0.3)}
+.lock-key.func{background:transparent}
+.lock-key-num{font-size:22px;font-weight:300;color:#fff;line-height:1}
+.lock-key-alpha{font-size:7px;color:rgba(255,255,255,0.6);letter-spacing:2px;font-weight:700;margin-top:1px}
+.lock-hint{text-align:center;font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.4);letter-spacing:1px;margin-top:8px;padding:0 16px}
+
+/* Home screen */
+#phone-home{background:linear-gradient(135deg,#1a0a2e 0%,#0a0518 60%,#16213e 100%);padding:12px;overflow-y:auto}
+.phone-apps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:12px 4px}
+.phone-app{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:transform .15s}
+.phone-app:active{transform:scale(.88)}
+.app-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;position:relative;box-shadow:0 4px 12px rgba(0,0,0,0.4)}
+.app-badge{position:absolute;top:-4px;right:-4px;background:#ff3b30;color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.app-label{font-size:10px;color:#fff;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,0.6)}
+
+/* App screens */
+.phone-app-screen{background:#0e0e10;color:#fff;overflow:hidden}
+.app-header{height:46px;background:#16161a;border-bottom:1px solid #26262c;display:flex;align-items:center;padding:0 12px;gap:10px;flex-shrink:0}
+.app-back-btn{font-size:26px;color:#0af;background:none;border:none;cursor:pointer;line-height:1;padding:4px;min-width:36px}
+.app-header-title{font-size:15px;font-weight:600;flex:1}
+.app-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+/* WhatsApp */
+.chat-item{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid #1a1a1f;cursor:pointer;align-items:center}
+.chat-item:active{background:#16161c}
+.chat-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.chat-info{flex:1;min-width:0}
+.chat-name-row{display:flex;justify-content:space-between;margin-bottom:3px;align-items:baseline}
+.chat-name{font-size:14px;font-weight:600}
+.chat-time{font-size:10px;color:#666}
+.chat-preview-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.chat-preview{font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.chat-unread{background:#25d366;color:#000;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px;flex-shrink:0}
+.chat-header{height:54px;background:#16161a;border-bottom:1px solid #26262c;display:flex;align-items:center;padding:0 10px;gap:8px;flex-shrink:0}
+.chat-header-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.chat-header-info{flex:1;min-width:0}
+.chat-header-name{font-size:14px;font-weight:600}
+.chat-header-status{font-size:10px;color:#888}
+.chat-messages{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px;background:#0a0e11;display:flex;flex-direction:column;gap:6px}
+.chat-msg{max-width:80%;padding:8px 11px;border-radius:10px;font-size:12px;line-height:1.4;word-wrap:break-word}
+.chat-msg.them{background:#1f2c33;align-self:flex-start;border-top-left-radius:2px}
+.chat-msg.me{background:#005c4b;align-self:flex-end;border-top-right-radius:2px}
+.chat-msg.offensive{border-left:2px solid #ff3b5c}
+.msg-time{font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;text-align:right}
+
+/* Instagram */
+.ig-post{padding:10px 0;border-bottom:1px solid #1a1a1f}
+.ig-post-header{display:flex;align-items:center;gap:10px;padding:0 14px 8px}
+.ig-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#f09433,#dc2743);display:flex;align-items:center;justify-content:center;font-size:14px}
+.ig-username{font-size:13px;font-weight:600}
+.ig-image{width:100%;aspect-ratio:1;background:linear-gradient(135deg,#1a1a2e,#16213e);display:flex;align-items:center;justify-content:center;font-size:60px}
+.ig-actions{padding:10px 14px;display:flex;gap:14px;font-size:20px}
+.ig-caption{padding:0 14px 6px;font-size:12px;line-height:1.4}
+.ig-comment{padding:3px 14px;font-size:11px;color:#bbb}
+.ig-comment.offensive{color:#ff6b8a}
+.ig-comment strong{color:#fff}
+
+/* Notes */
+.note-item{padding:14px;border-bottom:1px solid #1a1a1f;cursor:pointer}
+.note-item:active{background:#16161c}
+.note-title{font-size:14px;font-weight:600;margin-bottom:4px}
+.note-date{font-size:10px;color:#888;font-family:var(--font-mono)}
+.note-preview{font-size:11px;color:#aaa;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note-view-title{font-family:var(--font-hand);font-size:20px;font-weight:700;padding:16px 16px 8px;color:#ffd60a}
+.note-view-body{padding:6px 16px 20px;font-family:var(--font-hand);font-size:13px;line-height:1.7;color:#e8d8b0;white-space:pre-wrap}
+
+/* Gallery */
+.gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px}
+.gallery-item{aspect-ratio:1;background:linear-gradient(135deg,#1a1a2e,#0a0a1a);display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;position:relative;transition:opacity .15s}
+.gallery-item:active{opacity:.7}
+.gallery-item.evidence::after{content:"●";position:absolute;top:4px;right:6px;color:#ff3b5c;font-size:10px}
+
+/* Calculator */
+#phone-calculator{background:#000;flex-direction:column}
+.calc-display{padding:20px 16px 10px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;min-height:70px;flex-shrink:0}
+.calc-expression{font-family:var(--font-mono);font-size:13px;color:#888;margin-bottom:2px}
+.calc-result{font-family:var(--font-display);font-size:40px;font-weight:300;color:#fff;line-height:1;word-break:break-all;text-align:right}
+.calc-secret{display:none;padding:10px 12px;background:rgba(255,59,92,0.1);border:1px solid var(--neon-red);margin:8px;border-radius:4px;animation:fadeIn .4s;flex-shrink:0}
+.calc-secret.show{display:block}
+.calc-secret-title{font-family:var(--font-mono);font-size:9px;color:var(--neon-red);letter-spacing:2px;margin-bottom:6px}
+.calc-secret-text{font-size:12px;line-height:1.5;color:#fff;font-family:var(--font-hand)}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:8px;flex-shrink:0}
+.calc-btn{aspect-ratio:1;background:#333;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:400;color:#fff;cursor:pointer;transition:all .1s}
+.calc-btn:active{opacity:.6}
+.calc-btn.func{background:#a5a5a5;color:#000}
+.calc-btn.op{background:#ff9500;color:#fff}
+.calc-btn.zero{aspect-ratio:auto;grid-column:span 2;border-radius:50px;justify-content:flex-start;padding-left:24px}
+
+/* Contacts */
+.contact-item{display:flex;gap:12px;padding:14px;border-bottom:1px solid #1a1a1f;align-items:center;cursor:pointer}
+.contact-item:active{background:#16161c}
+.contact-avatar{width:40px;height:40px;border-radius:50%;background:#0af;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.contact-info{flex:1}
+.contact-name{font-size:14px;font-weight:600}
+.contact-phone{font-size:11px;color:#888;font-family:var(--font-mono)}
+.contact-note{font-size:10px;color:#ff6b8a;margin-top:2px}
+
+/* TikTok */
+.tt-post{min-height:300px;background:#000;display:flex;align-items:center;justify-content:center;position:relative;border-bottom:1px solid #111;cursor:pointer}
+.tt-post:active{opacity:.85}
+.tt-emoji{font-size:90px;opacity:.7}
+.tt-info{position:absolute;bottom:12px;left:12px;right:60px;color:#fff}
+.tt-user{font-weight:700;font-size:13px;margin-bottom:3px}
+.tt-desc{font-size:11px;color:rgba(255,255,255,0.8);line-height:1.4}
+.tt-stats{position:absolute;right:12px;bottom:12px;display:flex;flex-direction:column;gap:12px;color:#fff;font-size:10px;text-align:center}
+.tt-stat-icon{font-size:22px}
+
+/* ─── SUSPECTS — BUG FIX: mobile usa abas em vez de colunas ─── */
+#panel-suspects{display:none}
+#panel-suspects.active{display:flex;flex-direction:column}
+.suspects-tabs{display:flex;background:var(--bg-panel);border-bottom:1px solid var(--border-dim);flex-shrink:0}
+.suspects-tab{flex:1;padding:12px 8px;font-family:var(--font-mono);font-size:10px;letter-spacing:2px;color:var(--text-muted);text-align:center;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.suspects-tab.active{color:var(--neon-cyan);border-bottom-color:var(--neon-cyan)}
+.suspects-panel{flex:1;overflow:hidden;display:none;flex-direction:column}
+.suspects-panel.active{display:flex}
+.suspects-list-header{padding:12px 16px;border-bottom:1px solid var(--border-dim);flex-shrink:0}
+.suspects-list-header h3{font-family:var(--font-mono);font-size:10px;color:var(--neon-cyan);letter-spacing:2px}
+#suspects-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.suspect-item{display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border-dim);cursor:pointer;transition:all .2s;align-items:center}
+.suspect-item:active{background:var(--bg-card)}
+.suspect-item.selected{background:var(--bg-card);border-left:2px solid var(--neon-cyan)}
+.suspect-item.interrogated{opacity:.65}
+.suspect-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#2a3a5a,#1a2540);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid var(--border-mid)}
+.suspect-info{flex:1;min-width:0}
+.suspect-name{font-size:13px;font-weight:600;margin-bottom:2px}
+.suspect-role{font-family:var(--font-mono);font-size:9px;color:var(--text-muted);letter-spacing:1px}
+.threat-badge{font-family:var(--font-mono);font-size:8px;padding:2px 6px;letter-spacing:1px;font-weight:700;border-radius:2px;white-space:nowrap;flex-shrink:0}
+.threat-badge.high{background:rgba(255,59,92,0.2);color:var(--neon-red);border:1px solid var(--neon-red)}
+.threat-badge.medium{background:rgba(255,176,32,0.2);color:var(--neon-amber);border:1px solid var(--neon-amber)}
+.threat-badge.low{background:rgba(34,197,94,0.2);color:var(--neon-green);border:1px solid var(--neon-green)}
+.no-suspect{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted)}
+.no-suspect-icon{font-size:40px;margin-bottom:12px;opacity:.5}
+.no-suspect-text{font-family:var(--font-mono);font-size:10px;letter-spacing:3px}
+.interrogation-view{flex:1;display:none;flex-direction:column;overflow:hidden}
+.interrogation-view.show{display:flex}
+.interrogation-header{padding:14px 16px;border-bottom:1px solid var(--border-dim);display:flex;align-items:center;gap:12px;background:var(--bg-panel);flex-shrink:0}
+.interr-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#2a3a5a,#1a2540);display:flex;align-items:center;justify-content:center;font-size:24px;border:1px solid var(--border-bright);flex-shrink:0}
+.interr-info{flex:1;min-width:0}
+.interr-name{font-family:var(--font-display);font-size:15px;font-weight:700;letter-spacing:1px}
+.interr-status{font-family:var(--font-mono);font-size:9px;color:var(--text-muted);letter-spacing:.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.interr-messages{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px;display:flex;flex-direction:column;gap:10px;background:var(--bg-deep)}
+.interr-msg{max-width:85%;padding:9px 12px;border-radius:8px;font-size:12px;line-height:1.5}
+.interr-msg.investigator{background:var(--bg-panel);border:1px solid var(--neon-cyan);align-self:flex-end;color:var(--text-primary)}
+.interr-msg.suspect{background:var(--bg-card);border:1px solid var(--border-mid);align-self:flex-start;color:var(--text-primary)}
+.interr-msg-label{font-family:var(--font-mono);font-size:8px;letter-spacing:1.5px;margin-bottom:3px;opacity:.7}
+.interr-question-area{padding:12px 14px;background:var(--bg-panel);border-top:1px solid var(--border-dim);flex-shrink:0;max-height:220px;overflow-y:auto}
+.question-label{font-family:var(--font-mono);font-size:9px;color:var(--neon-cyan);letter-spacing:2px;margin-bottom:10px}
+.question-options{display:flex;flex-direction:column;gap:7px}
+.question-btn{text-align:left;padding:10px 12px;background:var(--bg-card);border:1px solid var(--border-mid);color:var(--text-primary);font-size:12px;cursor:pointer;transition:all .2s;border-radius:4px;line-height:1.4}
+.question-btn:active:not(:disabled){background:var(--bg-deep);border-color:var(--neon-cyan)}
+.question-btn:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}
+
+/* ─── CLUES ─── */
+#panel-clues{display:none;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#panel-clues.active{display:block}
+.clues-header h2{font-family:var(--font-display);font-size:18px;letter-spacing:1px;margin-bottom:4px}
+.clues-header p{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-bottom:16px}
+.clues-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.clue-card{background:var(--bg-panel);border:1px solid var(--border-dim);padding:12px;transition:all .2s;position:relative;border-radius:2px}
+.clue-card.found{border-color:var(--neon-cyan);box-shadow:0 0 12px rgba(0,229,255,0.1)}
+.clue-card.locked{opacity:.35}
+.clue-card-num{font-family:var(--font-mono);font-size:8px;color:var(--neon-cyan);letter-spacing:2px;margin-bottom:4px}
+.clue-card-title{font-size:12px;font-weight:600;margin-bottom:6px;line-height:1.3}
+.clue-card-desc{font-size:11px;color:var(--text-secondary);line-height:1.4;margin-bottom:8px}
+.clue-card-source{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:1px;border-top:1px dashed var(--border-dim);padding-top:6px}
+
+/* ─── ANALYSIS ─── */
+#panel-analysis{display:none;flex-direction:column}
+#panel-analysis.active{display:flex}
+.analysis-toolbar{padding:12px 16px;background:var(--bg-panel);border-bottom:1px solid var(--border-dim);flex-shrink:0}
+.analysis-toolbar-title{font-family:var(--font-mono);font-size:10px;color:var(--neon-cyan);letter-spacing:2px;margin-bottom:2px}
+.analysis-toolbar-hint{font-family:var(--font-mono);font-size:9px;color:var(--text-muted)}
+.analysis-board{flex:1;position:relative;background:radial-gradient(ellipse at center,#0a1220 0%,var(--bg-void) 70%);overflow:hidden;touch-action:none}
+.analysis-board svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+/* BUG FIX: nós menores para mobile */
+.node{position:absolute;background:var(--bg-panel);border:1px solid var(--border-bright);padding:8px 10px;cursor:move;user-select:none;text-align:center;min-width:90px;transition:box-shadow .2s;border-radius:4px;will-change:left,top;touch-action:none}
+.node:hover,.node:active{box-shadow:0 0 20px rgba(0,229,255,0.4);z-index:10}
+.node.victim{border-color:var(--neon-cyan);box-shadow:0 0 12px rgba(0,229,255,0.3)}
+.node.suspect{border-color:var(--neon-red)}
+.node.evidence{border-color:var(--neon-amber)}
+.node-label{font-family:var(--font-display);font-size:9px;font-weight:700;letter-spacing:1px;margin-bottom:1px}
+.node-sub{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:.5px}
+
+/* ─── FINAL ─── */
+#screen-final{align-items:center;justify-content:flex-start;background:radial-gradient(ellipse at center,#1a0a18 0%,var(--bg-void) 70%);padding:24px;overflow-y:auto}
+.final-content{max-width:600px;width:100%;text-align:center;padding:20px 0}
+.final-icon{font-size:56px;margin-bottom:16px}
+.final-headline{font-family:var(--font-display);font-size:clamp(22px,7vw,32px);font-weight:700;letter-spacing:2px;color:var(--neon-cyan);margin-bottom:8px;text-shadow:0 0 30px rgba(0,229,255,0.4)}
+.final-text{font-size:13px;line-height:1.7;color:var(--text-secondary);margin-bottom:20px}
+.final-stat{display:flex;justify-content:center;gap:24px;margin-bottom:24px;flex-wrap:wrap}
+.final-stat-item{text-align:center}
+.final-stat-num{font-family:var(--font-display);font-size:32px;font-weight:700;color:var(--neon-cyan)}
+.final-stat-label{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:2px;margin-top:3px}
+.final-message{background:rgba(255,59,92,0.08);border:1px solid rgba(255,59,92,0.3);border-left:3px solid var(--neon-red);padding:18px;text-align:left;font-size:13px;line-height:1.7;color:var(--text-secondary);margin-bottom:20px;border-radius:2px}
+.final-message strong{display:block;color:var(--neon-red);font-family:var(--font-mono);font-size:10px;letter-spacing:2px;margin-bottom:10px}
+.final-restart{background:transparent;border:1px solid var(--neon-cyan);color:var(--neon-cyan);font-family:var(--font-mono);font-size:11px;letter-spacing:3px;padding:14px 32px;font-weight:700;transition:all .3s;border-radius:4px;width:100%}
+.final-restart:active{background:var(--neon-cyan);color:var(--bg-void)}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<div id="scanlines"></div>
+
+<div id="loading-overlay">
+  <div class="loading-logo">DIVISÃO DE CRIMES DIGITAIS</div>
+  <div class="loading-bar-wrap"><div class="loading-bar" id="loading-bar"></div></div>
+  <div class="loading-text" id="loading-text">INICIANDO SISTEMA...</div>
+</div>
+
+<div id="notification">
+  <div class="notif-header">
+    <span id="notif-app">SISTEMA</span>
+    <span id="notif-time">agora</span>
+  </div>
+  <div class="notif-text" id="notif-text"></div>
+</div>
+
+<div id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-clue-badge" id="modal-badge" style="display:none">PISTA COLETADA</div>
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-text" id="modal-text"></div>
+    <button class="modal-close" onclick="closeModal()">FECHAR</button>
+  </div>
+</div>
+
+<!-- INTRO -->
+<div class="screen active" id="screen-intro">
+  <div class="intro-logo">
+    <div class="intro-badge">DIVISÃO DE CRIMES DIGITAIS · CASO #4721-E</div>
+    <div class="intro-title">PROJETO ECLIPSE</div>
+    <div class="intro-subtitle">O ÚLTIMO SINAL</div>
+    <div class="intro-divider"></div>
+    <div class="intro-warning">
+      Este projeto contém conteúdo relacionado a <strong>cyberbullying</strong> e suas consequências. Os eventos descritos são ficcionais, mas refletem situações reais enfrentadas por adolescentes.<br><br>
+      Se você ou alguém que você conhece está passando por situação semelhante, procure ajuda: <strong>CVV 188</strong>
+    </div>
+    <button class="intro-btn" onclick="startGame()">▶ INICIAR INVESTIGAÇÃO</button>
+    <div class="intro-classification">CLASSIFICAÇÃO: ACESSO RESTRITO · INVESTIGADOR AUTORIZADO</div>
+  </div>
+</div>
+
+<!-- BRIEFING -->
+<div class="screen" id="screen-briefing">
+  <div class="briefing-header">
+    <div class="briefing-badge">DIVISÃO CYBERCRIME · BRIEFING INICIAL</div>
+    <div class="briefing-title">CASO #4721-E · Luna Carvalho</div>
+  </div>
+  <div class="briefing-body">
+    <div class="case-file">
+      <div class="case-stamp">⬤ CONFIDENCIAL</div>
+      <div class="case-photo-area">
+        <div class="victim-photo">
+          <div class="victim-photo-inner">🌙</div>
+          <div>
+            <div class="victim-photo-label">VÍTIMA · CASO #4721-E</div>
+            <div style="font-size:13px;font-weight:600;margin-top:4px">Luna Carvalho</div>
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted)">15 anos · EMEB Prof. Santos · 9º Ano B</div>
+          </div>
+        </div>
+        <div class="case-info">
+          <div class="case-field"><div class="case-field-label">DATA DO INCIDENTE</div><div class="case-field-value critical">14 de Outubro</div></div>
+          <div class="case-field"><div class="case-field-label">NATUREZA</div><div class="case-field-value critical">Cyberbullying prolongado · Resultado fatal</div></div>
+        </div>
+      </div>
+      <div class="case-divider"></div>
+      <div class="case-section-title">▸ RESUMO DO CASO</div>
+      <div class="case-text">
+        Luna Carvalho era uma estudante do 9º ano com histórico de bom desempenho. Nos últimos 4 meses antes do incidente, professores relataram mudanças progressivas: isolamento, queda no rendimento e ausências frequentes.<br><br>
+        O celular da vítima foi entregue pelos pais como principal fonte de evidências. Sua análise é sua missão.
+      </div>
+      <div class="case-divider"></div>
+      <div class="case-section-title">▸ SEUS OBJETIVOS</div>
+      <ul class="objective-list">
+        <li>Analisar o dispositivo móvel da vítima</li>
+        <li>Identificar e interrogar os suspeitos envolvidos</li>
+        <li>Coletar e cruzar pistas para reconstituir os eventos</li>
+        <li>Descobrir quem iniciou a campanha de cyberbullying</li>
+        <li>Compreender a progressão psicológica do caso</li>
+      </ul>
+    </div>
+    <button class="briefing-start-btn" onclick="enterMain()">▸ ACESSAR DISPOSITIVO DA VÍTIMA</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="screen" id="screen-main">
+  <div class="top-bar">
+    <div class="top-bar-logo">◈ ECLIPSE</div>
+    <div class="top-bar-progress-wrap">
+      <div class="top-bar-progress-label"><span>PROG.</span><span id="progress-pct">0%</span></div>
+      <div class="top-bar-progress-bar"><div class="top-bar-progress-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+    <div class="top-bar-clues" id="clue-counter">🔍 0</div>
+    <div class="top-bar-time" id="clock-display">--:--</div>
+  </div>
+
+  <div class="main-container">
+    <div class="main-content">
+      <!-- DASHBOARD -->
+      <div class="content-panel active" id="panel-dashboard">
+        <div class="dashboard-welcome">
+          <h2>Central de Investigação</h2>
+          <p>Caso #4721-E · Luna Carvalho · Em andamento</p>
+        </div>
+        <div class="dashboard-grid">
+          <div class="stat-card" style="--accent-color:var(--neon-red)" onclick="showPanel('phone')">
+            <div class="stat-card-label">EVIDÊNCIAS</div>
+            <div class="stat-card-value" id="stat-phone">15</div>
+            <div class="stat-card-sub">Pistas no celular</div>
+          </div>
+          <div class="stat-card" style="--accent-color:var(--neon-amber)" onclick="showPanel('suspects')">
+            <div class="stat-card-label">SUSPEITOS</div>
+            <div class="stat-card-value" id="stat-suspects">20</div>
+            <div class="stat-card-sub"><span id="stat-interrogated">0</span> interrogados</div>
+          </div>
+          <div class="stat-card" style="--accent-color:var(--neon-cyan)" onclick="showPanel('clues')">
+            <div class="stat-card-label">PISTAS</div>
+            <div class="stat-card-value" id="stat-clues">0</div>
+            <div class="stat-card-sub">De 15 disponíveis</div>
+          </div>
+          <div class="stat-card" style="--accent-color:var(--neon-violet)" onclick="showPanel('analysis')">
+            <div class="stat-card-label">CONEXÕES</div>
+            <div class="stat-card-value" id="stat-connections">0</div>
+            <div class="stat-card-sub">Mapeadas</div>
+          </div>
+        </div>
+        <div class="timeline-card">
+          <div class="timeline-card-title">▸ LINHA DO TEMPO</div>
+          <div id="timeline-items"></div>
+        </div>
+        <!-- Conclusão inline no dashboard -->
+        <button class="briefing-start-btn" style="margin-top:16px;border-color:var(--neon-violet);color:var(--neon-violet)" onclick="checkFinalCondition()">⚖ CONCLUIR INVESTIGAÇÃO</button>
+      </div>
+
+      <!-- PHONE -->
+      <div class="content-panel" id="panel-phone">
+        <div class="phone-frame" id="phone-frame">
+          <div class="phone-status-bar">
+            <span id="phone-time">--:--</span>
+            <div class="phone-status-icons"><span>📶</span><span>🔋</span></div>
+          </div>
+
+          <div class="phone-screen active" id="phone-lock">
+            <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px">
+              <div class="lock-time" id="lock-time">--:--</div>
+              <div class="lock-date" id="lock-date">Carregando...</div>
+              <div class="lock-notifications">
+                <div class="lock-notif"><div class="lock-notif-header"><span>WHATSAPP</span><span>23:47</span></div><div class="lock-notif-text">Grupo "Escola Galera": "rs kkk olha essa foto 😂"</div></div>
+                <div class="lock-notif"><div class="lock-notif-header"><span>INSTAGRAM</span><span>23:51</span></div><div class="lock-notif-text">@_anon.truth e mais 47 comentários</div></div>
+                <div class="lock-notif"><div class="lock-notif-header"><span>TIKTOK</span><span>00:03</span></div><div class="lock-notif-text">Seu vídeo foi compartilhado 312 vezes</div></div>
+              </div>
+              <div class="lock-pin-area">
+                <div class="lock-pin-display">
+                  <div class="lock-pin-dot" id="pin0"></div>
+                  <div class="lock-pin-dot" id="pin1"></div>
+                  <div class="lock-pin-dot" id="pin2"></div>
+                  <div class="lock-pin-dot" id="pin3"></div>
+                </div>
+                <div class="lock-keypad">
+                  <div class="lock-key" onclick="enterPin('1')"><span class="lock-key-num">1</span></div>
+                  <div class="lock-key" onclick="enterPin('2')"><span class="lock-key-num">2</span><span class="lock-key-alpha">ABC</span></div>
+                  <div class="lock-key" onclick="enterPin('3')"><span class="lock-key-num">3</span><span class="lock-key-alpha">DEF</span></div>
+                  <div class="lock-key" onclick="enterPin('4')"><span class="lock-key-num">4</span><span class="lock-key-alpha">GHI</span></div>
+                  <div class="lock-key" onclick="enterPin('5')"><span class="lock-key-num">5</span><span class="lock-key-alpha">JKL</span></div>
+                  <div class="lock-key" onclick="enterPin('6')"><span class="lock-key-num">6</span><span class="lock-key-alpha">MNO</span></div>
+                  <div class="lock-key" onclick="enterPin('7')"><span class="lock-key-num">7</span><span class="lock-key-alpha">PQRS</span></div>
+                  <div class="lock-key" onclick="enterPin('8')"><span class="lock-key-num">8</span><span class="lock-key-alpha">TUV</span></div>
+                  <div class="lock-key" onclick="enterPin('9')"><span class="lock-key-num">9</span><span class="lock-key-alpha">WXYZ</span></div>
+                  <div class="lock-key func" onclick="clearPin()"><span class="lock-key-num" style="font-size:16px">⌫</span></div>
+                  <div class="lock-key" onclick="enterPin('0')"><span class="lock-key-num">0</span></div>
+                  <div class="lock-key func"></div>
+                </div>
+                <div class="lock-hint">DICA: Data de aniversário de Luna (DDMM)</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="phone-screen" id="phone-home">
+            <div class="phone-apps-grid">
+              <div class="phone-app" onclick="openApp('whatsapp')"><div class="app-icon" style="background:linear-gradient(135deg,#25d366,#128c7e)">💬<div class="app-badge">3</div></div><div class="app-label">WhatsApp</div></div>
+              <div class="phone-app" onclick="openApp('instagram')"><div class="app-icon" style="background:linear-gradient(135deg,#f09433,#dc2743,#bc1888)">📸<div class="app-badge">47</div></div><div class="app-label">Instagram</div></div>
+              <div class="phone-app" onclick="openApp('notes')"><div class="app-icon" style="background:linear-gradient(135deg,#ffd60a,#ff9f0a)">📓</div><div class="app-label">Notas</div></div>
+              <div class="phone-app" onclick="openApp('gallery')"><div class="app-icon" style="background:linear-gradient(135deg,#30d158,#34c759)">🖼️</div><div class="app-label">Galeria</div></div>
+              <div class="phone-app" onclick="openApp('calculator')"><div class="app-icon" style="background:linear-gradient(135deg,#636366,#48484a)">🔢</div><div class="app-label">Calc.</div></div>
+              <div class="phone-app" onclick="openApp('contacts')"><div class="app-icon" style="background:linear-gradient(135deg,#007aff,#0055b3)">👥</div><div class="app-label">Contatos</div></div>
+              <div class="phone-app" onclick="openApp('tiktok')"><div class="app-icon" style="background:linear-gradient(135deg,#010101,#ee1d52)">🎵<div class="app-badge">5</div></div><div class="app-label">TikTok</div></div>
+              <div class="phone-app" onclick="tryEncrypted()"><div class="app-icon" style="background:linear-gradient(135deg,#1c1c1e,#2c2c2e);border:1px solid rgba(255,100,0,0.4)">🔐</div><div class="app-label">Arquivo</div></div>
+            </div>
+          </div>
+
+          <div class="phone-screen phone-app-screen" id="phone-whatsapp">
+            <div class="app-header"><button class="app-back-btn" onclick="goHome()">‹</button><div class="app-header-title">WhatsApp</div></div>
+            <div class="app-content" id="chat-list"></div>
+          </div>
+
+          <div class="phone-screen phone-app-screen" id="phone-chat-view">
+            <div class="chat-header">
+              <button class="app-back-btn" onclick="openApp('whatsapp')">‹</button>
+              <div class="chat-header-avatar" id="chat-view-avatar">👤</div>
+              <div class="chat-header-info"><div class="chat-header-name" id="chat-view-name">Chat</div><div class="chat-header-status">online</div></div>
+            </div>
+            <div class="chat-messages" id="chat-view-messages"></div>
+          </div>
+
+          <div class="phone-screen phone-app-screen" id="phone-instagram">
+            <div class="app-header"><button class="app-back-btn" onclick="goHome()">‹</button><div class="app-header-title">Instagram</div></div>
+            <div class="app-content" id="ig-feed"></div>
+          </div>
+
+          <div class="phone-screen phone-app-screen" id="phone-notes">
+            <div class="app-header"><button class="app-back-btn" onclick="goHome()">‹</button><div class="app-header-title">Notas</div></div>
+            <div class="app-content" id="notes-list"></div>
+          </div>
+
+          <div class="phone-screen phone-app-screen" id="phone-note-view">
+            <div class="app-header"><button class="app-back-btn" onclick="openApp('notes')">‹</button><div class="app-header-title">Nota</div></div>
+            <div class="note-view-title" id="note-view-h"></div>
+            <div class="app-content"><div class="note-view-body" id="note-view-body"></div></div>
+          </div>
+
+          <div class="phone-screen phone-app-screen" id="phone-gallery">
+            <div class="app-header"><button class="app-back-btn" onclick="goHome()">‹</button><div class="app-header-title">Galeria</div></div>
+            <div class="app-content"><div class="gallery-grid" id="gallery-grid"></div></div>
+          </div>
+
+          <div class="phone-screen phone-app-screen" id="phone-calculator">
+            <div class="app-header"><button class="app-back-btn" onclick="goHome()">‹</button><div class="app-header-title">Calculadora</div></div>
+            <div class="calc-display"><div class="calc-expression" id="calc-expr"></div><div class="calc-result" id="calc-result">0</div></div>
+            <div class="calc-secret" id="calc-secret">
+              <div class="calc-secret-title">▸ ARQUIVO OCULTO ENCONTRADO</div>
+              <div class="calc-secret-text" id="calc-secret-text"></div>
+            </div>
+            <div class="calc-grid">
+              <div class="calc-btn func" onclick="calcFunc('AC')">AC</div>
+              <div class="calc-btn func" onclick="calcFunc('+/-')">+/-</div>
+              <div class="calc-btn func" onclick="calcFunc('%')">%</div>
+              <div class="calc-btn op" onclick="calcInput('÷')">÷</div>
+              <div class="calc-btn" onclick="calcInput('7')">7</div>
+              <div class="calc-btn" onclick="calcInput('8')">8</div>
+              <div class="calc-btn" onclick="calcInput('9')">9</div>
+              <div class="calc-btn op" onclick="calcInput('×')">×</div>
+              <div class="calc-btn" onclick="calcInput('4')">4</div>
+              <div class="calc-btn" onclick="calcInput('5')">5</div>
+              <div class="calc-btn" onclick="calcInput('6')">6</div>
+              <div class="calc-btn op" onclick="calcInput('-')">−</div>
+              <div class="calc-btn" onclick="calcInput('1')">1</div>
+              <div class="calc-btn" onclick="calcInput('2')">2</div>
+              <div class="calc-btn" onclick="calcInput('3')">3</div>
+              <div class="calc-btn op" onclick="calcInput('+')">+</div>
+              <div class="calc-btn zero" onclick="calcInput('0')">0</div>
+              <div class="calc-btn" onclick="calcInput('.')">.</div>
+              <div class="calc-btn op" onclick="calcEquals()">=</div>
+            </div>
+          </div>
+
+          <div class="phone-screen phone-app-screen" id="phone-contacts">
+            <div class="app-header"><button class="app-back-btn" onclick="goHome()">‹</button><div class="app-header-title">Contatos</div></div>
+            <div class="app-content" id="contacts-list"></div>
+          </div>
+
+          <div class="phone-screen phone-app-screen" id="phone-tiktok">
+            <div class="app-header" style="background:#000"><button class="app-back-btn" onclick="goHome()">‹</button><div class="app-header-title">TikTok</div></div>
+            <div class="app-content" id="tiktok-feed" style="background:#000"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUSPECTS — BUG FIX: abas mobile -->
+      <div class="content-panel" id="panel-suspects">
+        <div class="suspects-tabs">
+          <div class="suspects-tab active" id="tab-list" onclick="switchSuspectsTab('list')">▸ SUSPEITOS</div>
+          <div class="suspects-tab" id="tab-interr" onclick="switchSuspectsTab('interr')">▸ INTERROGAR</div>
+        </div>
+        <div class="suspects-panel active" id="suspects-panel-list">
+          <div class="suspects-list-header"><h3>▸ 20 PERFIS IDENTIFICADOS</h3></div>
+          <div id="suspects-list"></div>
+        </div>
+        <div class="suspects-panel" id="suspects-panel-interr">
+          <div id="no-suspect-selected" class="no-suspect">
+            <div class="no-suspect-icon">🔍</div>
+            <div class="no-suspect-text">SELECIONE UM SUSPEITO</div>
+          </div>
+          <div id="interrogation-view" class="interrogation-view">
+            <div class="interrogation-header">
+              <div class="interr-avatar" id="interr-avatar">👤</div>
+              <div class="interr-info">
+                <div class="interr-name" id="interr-name">-</div>
+                <div class="interr-status" id="interr-status">Aguardando interrogatório</div>
+              </div>
+              <div class="threat-badge" id="interr-threat">-</div>
+            </div>
+            <div class="interr-messages" id="interr-messages"></div>
+            <div class="interr-question-area">
+              <div class="question-label">▸ ESCOLHA UMA PERGUNTA</div>
+              <div class="question-options" id="question-options"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CLUES -->
+      <div class="content-panel" id="panel-clues">
+        <div class="clues-header">
+          <h2>BANCO DE PISTAS</h2>
+          <p>Pistas coletadas. Cruze informações para descobrir conexões.</p>
+        </div>
+        <div class="clues-grid" id="clues-grid"></div>
+      </div>
+
+      <!-- ANALYSIS -->
+      <div class="content-panel" id="panel-analysis">
+        <div class="analysis-toolbar">
+          <div class="analysis-toolbar-title">▸ MAPA CRIMINAL · CONEXÕES</div>
+          <div class="analysis-toolbar-hint">Arraste os nós · Explore as conexões</div>
+        </div>
+        <div class="analysis-board" id="analysis-board"><svg id="connections"></svg></div>
+      </div>
+    </div>
+
+    <!-- Bottom navigation (substitui sidebar) -->
+    <div class="bottom-nav">
+      <div class="nav-item active" id="nav-dashboard" onclick="showPanel('dashboard')">
+        <div class="nav-icon">◈</div>
+        <div class="nav-label">Central</div>
+      </div>
+      <div class="nav-item" id="nav-phone" onclick="showPanel('phone')">
+        <div class="nav-icon">📱</div>
+        <div class="nav-label">Celular</div>
+        <div class="nav-badge" id="phone-badge">!</div>
+      </div>
+      <div class="nav-item" id="nav-suspects" onclick="showPanel('suspects')">
+        <div class="nav-icon">👤</div>
+        <div class="nav-label">Suspeitos</div>
+        <div class="nav-badge dim" id="suspects-badge">20</div>
+      </div>
+      <div class="nav-item" id="nav-clues" onclick="showPanel('clues')">
+        <div class="nav-icon">📋</div>
+        <div class="nav-label">Pistas</div>
+        <div class="nav-badge dim" id="clues-badge" style="display:none">0</div>
+      </div>
+      <div class="nav-item" id="nav-analysis" onclick="showPanel('analysis')">
+        <div class="nav-icon">🗺️</div>
+        <div class="nav-label">Mapa</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FINAL -->
+<div class="screen" id="screen-final">
+  <div class="final-content">
+    <div class="final-icon">🌙</div>
+    <div class="final-headline">O Último Sinal de Luna</div>
+    <div class="final-text" id="final-text">Caso encerrado. Os responsáveis foram identificados.</div>
+    <div class="final-stat">
+      <div class="final-stat-item"><div class="final-stat-num" id="fs-clues">0</div><div class="final-stat-label">PISTAS</div></div>
+      <div class="final-stat-item"><div class="final-stat-num" id="fs-suspects">0</div><div class="final-stat-label">INTERROGADOS</div></div>
+      <div class="final-stat-item"><div class="final-stat-num" id="fs-pct">0%</div><div class="final-stat-label">COMPLETADO</div></div>
+    </div>
+    <div class="final-message">
+      <strong>▸ MENSAGEM DE CONSCIENTIZAÇÃO</strong>
+      Luna Carvalho tinha 15 anos. Ela documentou cada mensagem, cada comentário, cada momento de dor — no diário do celular, nas capturas de tela, no arquivo oculto da calculadora. Ela esperava que alguém encontrasse.<br><br>
+      Gabriel Bastos criou a conta @_anon.truth usando o computador da biblioteca. Rafaela, Thiago, Kauã e Letícia participaram ativamente. Dezenas mais silenciaram, curtiram ou compartilharam.<br><br>
+      A escola recebeu uma denúncia. Não agiu.<br><br>
+      Cyberbullying mata. Denuncie. Ouça. Apoie. <strong style="color:var(--neon-cyan)">CVV 188 · disque100</strong>
+    </div>
+    <button class="final-restart" onclick="restartGame()">↺ NOVA INVESTIGAÇÃO</button>
+  </div>
+</div>
+
+<script>
+const CORRECT_PIN = "1808";
+const STATE = {
+  pinInput: "",
+  phoneUnlocked: false,
+  clues: new Set(),
+  interrogated: new Set(),
+  currentSuspect: null,
+  askedQuestions: {},
+  calcSecretFound: false
+};
+
+// ──── DATA ────
+const CLUES_DATA = {
+  c1: {title:"Mensagens ofensivas no grupo",desc:"Grupo do WhatsApp com 32 membros. Mensagens de zombaria e prints de Luna circulando.",source:"WhatsApp"},
+  c2: {title:"Conta anônima @_anon.truth",desc:"Conta no Instagram criada em junho. Publicou montagens com a Luna e expôs informações privadas.",source:"Instagram"},
+  c3: {title:"Vídeo viral no TikTok",desc:"Vídeo zombando Luna com 312 compartilhamentos. Postado pelo @thiago_oficial em outubro.",source:"TikTok"},
+  c4: {title:"Diário da Luna",desc:"Notas mostram progressão do sofrimento por 4 meses. Inclui nomes dos agressores.",source:"Notas"},
+  c5: {title:"Senha 1808 — aniversário",desc:"Luna anotou: '1808 — meu aniversário, único dia em que ainda me sinto eu mesma'.",source:"Notas"},
+  c6: {title:"Arquivo oculto na calculadora",desc:"Digite '1808=' na calculadora. Luna escondeu a lista com os nomes dos agressores.",source:"Calculadora"},
+  c7: {title:"Mensagens de Gabriel Bastos",desc:"Conversa onde Gabriel se gaba para Pedro de ter criado a conta @_anon.truth.",source:"WhatsApp"},
+  c8: {title:"Comentários de Rafaela",desc:"Rafaela Melo, ex-melhor amiga, fez 24 comentários ofensivos nos posts da Luna.",source:"Instagram"},
+  c9: {title:"Print de tela com ameaças",desc:"Luna salvou screenshots das ameaças. Servem como prova material em juízo.",source:"Galeria"},
+  c10:{title:"@_anon.truth bloqueado",desc:"Número rastreável até a rede da biblioteca da escola.",source:"Contatos"},
+  c11:{title:"Conversa com Bia (única amiga)",desc:"Bia tentou alertar a coordenação. Foi ignorada. Era a única que ainda apoiava Luna.",source:"WhatsApp"},
+  c12:{title:"Última nota — despedida",desc:"Nota de 13/10, véspera do incidente. Luna se despede e nomeia os responsáveis.",source:"Notas"},
+  c13:{title:"Vídeo compartilhado por Letícia",desc:"Letícia foi a primeira a compartilhar o vídeo viral. Multiplicou o alcance em 10x.",source:"TikTok"},
+  c14:{title:"Denúncia ignorada pela escola",desc:"Luna enviou e-mail ao diretor Carlos Pinto. Nenhuma ação foi tomada.",source:"Notas"},
+  c15:{title:"Foto editada de Luna",desc:"Imagem manipulada digitalmente. Origem rastreada a Gabriel B.",source:"Galeria"}
+};
+
+const TIMELINE = [
+  {label:"Junho — Conta @_anon.truth criada",status:"done",sub:"Origem do ataque coordenado"},
+  {label:"Julho — Mensagens no grupo escolar",status:"done",sub:"Primeiras ofensas públicas"},
+  {label:"Agosto — Ruptura com amigos",status:"done",sub:"Rafaela vira agressora"},
+  {label:"Setembro — Vídeo viraliza no TikTok",status:"done",sub:"312 compartilhamentos"},
+  {label:"Outubro — Denúncia à escola ignorada",status:"active",sub:"Diretor não respondeu"},
+  {label:"14 de Outubro — Incidente",status:"active",sub:"Fim trágico do caso"}
+];
+
+const CHATS = [
+  {id:"escolagalera",name:"Escola Galera (32)",avatar:"👥",color:"#1e3a2f",unread:3,preview:"rs kkk olha essa foto 😂",messages:[
+    {from:"them",name:"Thiago",text:"galera olha o tiktok da luna kkkkk",time:"21:12"},
+    {from:"them",name:"Kauã",text:"que vergonha alheia",time:"21:13",offensive:true},
+    {from:"them",name:"Rafaela",text:"se quisesse acabar comigo era só falar, eu nem perderia tempo",time:"21:15",offensive:true},
+    {from:"them",name:"Letícia",text:"compartilhei nos meus stories já 💀",time:"21:18",offensive:true},
+    {from:"me",name:"Luna",text:"para vc tbm rafa? gente eu achei q vc era minha amiga",time:"21:22"},
+    {from:"them",name:"Rafaela",text:"amiga sua? sai pra lá",time:"21:23",offensive:true},
+    {from:"them",name:"Gabriel",text:"@_anon.truth tem foto nova hein 👀",time:"23:47",offensive:true}
+  ]},
+  {id:"gabriel-pedro",name:"Gabriel B. → Pedro",avatar:"👤",color:"#3a1e2f",unread:0,preview:"fui eu que criei a @_anon",messages:[
+    {from:"them",name:"Pedro",text:"mano, ta saindo mt comentário no insta sobre a luna",time:"19:02"},
+    {from:"them",name:"Gabriel",text:"kkkkkkk fui eu",time:"19:03",offensive:true,clue:"c7"},
+    {from:"them",name:"Pedro",text:"vc?? como assim",time:"19:03"},
+    {from:"them",name:"Gabriel",text:"criei @_anon.truth na biblioteca da escola, computador 3. ninguém vai descobrir",time:"19:05",offensive:true,clue:"c7"},
+    {from:"them",name:"Pedro",text:"vc é doente kkkk",time:"19:06"},
+    {from:"them",name:"Gabriel",text:"ela merece. ficou se achando demais",time:"19:07",offensive:true}
+  ]},
+  {id:"bia",name:"Bia 💜",avatar:"🌸",color:"#3a1e3a",unread:0,preview:"tô com vc, viu? nao tá sozinha",messages:[
+    {from:"them",name:"Bia",text:"luuu, vi os comentários hj. quer que eu vá aí?",time:"22:30",clue:"c11"},
+    {from:"me",name:"Luna",text:"bi, eu não aguento mais. é todo dia",time:"22:35"},
+    {from:"them",name:"Bia",text:"vou falar com a coordenadora amanhã, juro",time:"22:36",clue:"c11"},
+    {from:"me",name:"Luna",text:"ja tentei. o diretor nao respondeu meu email",time:"22:38",clue:"c14"},
+    {from:"them",name:"Bia",text:"então a gente vai juntas. tô com vc. nao tá sozinha",time:"22:40",clue:"c11"},
+    {from:"me",name:"Luna",text:"obg, bi. vc é a unica que ainda fala comigo",time:"22:42"}
+  ]},
+  {id:"familia",name:"Família ❤️",avatar:"🏠",color:"#1e2f3a",unread:0,preview:"filha, vamos jantar?",messages:[
+    {from:"them",name:"Mãe",text:"luna, filha, vamos jantar mais tarde?",time:"18:00"},
+    {from:"me",name:"Luna",text:"to sem fome, mae",time:"18:30"},
+    {from:"them",name:"Mãe",text:"tudo bem na escola, amor?",time:"18:31"},
+    {from:"me",name:"Luna",text:"tudo",time:"18:35"}
+  ]}
+];
+
+const IG_POSTS = [
+  {user:"luna.crv",avatar:"🌙",img:"📷",caption:"meu lugar favorito 🌊",likes:12,comments:[
+    {user:"_anon.truth",text:"olha quem postou! ninguém ligou kkk",offensive:true,clue:"c2"},
+    {user:"rafaela.m",text:"nossa que cringe",offensive:true,clue:"c8"},
+    {user:"_anon.truth",text:"vai chorar no quarto, palhaça",offensive:true,clue:"c2"},
+    {user:"bia.aaa",text:"linda demais lu 💜"},
+    {user:"kauã.p",text:"que foto mais sem graça kkkk",offensive:true}
+  ]},
+  {user:"luna.crv",avatar:"🌙",img:"🎨",caption:"desenhei hoje 💭",likes:8,comments:[
+    {user:"_anon.truth",text:"que talento (não)",offensive:true},
+    {user:"rafaela.m",text:"to passando mal de rir",offensive:true,clue:"c8"},
+    {user:"thiago_oficial",text:"alguem chama a guarda municipal pra essa arte",offensive:true},
+    {user:"bia.aaa",text:"amei lu, você é incrível 💜"}
+  ]}
+];
+
+const NOTES = [
+  {id:"n1",title:"meu aniversário",date:"12 jun",preview:"1808 — meu aniversário...",clue:"c5",body:"1808 — meu aniversário, único dia em que ainda me sinto eu mesma. minha mãe me deu uma corrente. a bi me deu um desenho. ninguém mais ligou.\n\nuso isso como senha pra eu lembrar que existe um dia bom."},
+  {id:"n2",title:"diário",date:"15 ago",preview:"hoje a rafaela me chamou de...",clue:"c4",body:"hoje a rafaela me chamou de patética no corredor. de repente meu telefone começou a vibrar sem parar. o grupo todo rindo de uma foto editada minha.\n\nfoi o gabriel? a rafaela? o thiago? talvez todos eles. talvez ninguém ligue se eu sumir.\n\nnão consigo mais dormir."},
+  {id:"n3",title:"denúncia",date:"02 out",preview:"enviei email pro diretor...",clue:"c14",body:"enviei email pro diretor carlos pinto há 12 dias.\nnão respondeu.\nfalei com a coordenadora — disse que 'são coisas de adolescente'.\n\nestou registrando aqui pra alguém saber que eu tentei.\nninguém me ouviu."},
+  {id:"n4",title:"se alguém ler isso",date:"13 out",preview:"se alguém ler isso, saibam...",clue:"c12",body:"se alguém ler isso, saibam:\n\nGabriel Bastos criou a conta @_anon.truth.\nRafaela Melo me traiu.\nThiago Santos postou o vídeo.\nKauã Pereira riu de cada coisa.\nLetícia Ferreira espalhou tudo.\n\neles sabem o que fizeram.\n\na escola sabe.\nninguém fez nada.\n\nme desculpa, mãe.\nme desculpa, bi.\neu tentei.\n\n— luna"}
+];
+
+const GALLERY = [
+  {emoji:"🌊",evidence:false},
+  {emoji:"🎨",evidence:false},
+  {emoji:"📸",evidence:true,title:"Print de ameaça (16/09)",clue:"c9",text:"Screenshot da conta @_anon.truth: 'some daí, ngm te suporta'. Evidência arquivada por Luna."},
+  {emoji:"🌙",evidence:false},
+  {emoji:"📋",evidence:true,title:"Foto editada de Luna",clue:"c15",text:"Imagem manipulada digitalmente compartilhada nos grupos. Metadados apontam Gabriel B. como autor."},
+  {emoji:"💜",evidence:false},
+  {emoji:"📱",evidence:true,title:"Print do vídeo no TikTok",clue:"c3",text:"Captura do vídeo viral. 312 compartilhamentos. Postado por @thiago_oficial."},
+  {emoji:"☕",evidence:false},
+  {emoji:"📖",evidence:false}
+];
+
+const CONTACTS_DATA = [
+  {name:"Mãe ❤️",phone:"+55 11 9 8765-4321",emoji:"👩",note:""},
+  {name:"Bia 💜",phone:"+55 11 9 7654-3210",emoji:"🌸",note:"melhor amiga"},
+  {name:"@_anon.truth (BLOQUEADO)",phone:"Desconhecido",emoji:"🚫",note:"Bloqueado em 12/09 — rastreável à rede da biblioteca da escola",clue:"c10"},
+  {name:"Rafaela M.",phone:"+55 11 9 6543-2109",emoji:"💄",note:"ex-amiga"},
+  {name:"Diretor C. Pinto",phone:"+55 11 3456-7890",emoji:"🏫",note:"escola"}
+];
+
+const TIKTOK_POSTS = [
+  {user:"@thiago_oficial",desc:"olha essa choradeira 🤣 #escola #fail #virou_meme",views:"58.2K",likes:"4.1K",comments:"312",emoji:"🎬",clue:"c3"},
+  {user:"@letíciaff",desc:"reagindo ao vídeo da luna kkkkk #compartilhem",views:"31.4K",likes:"2.8K",comments:"188",emoji:"📹",clue:"c13"}
+];
+
+const SUSPECTS = [
+  {id:"s1",name:"Gabriel Bastos",role:"Estudante · 9B",emoji:"😈",threat:"high",bio:"Criador da conta @_anon.truth. Mente principal por trás do ataque.",questions:[
+    {q:"Você criou a conta @_anon.truth?",a:"Que conta? Não sei do que tá falando.",unlocksClue:null},
+    {q:"Temos prints da sua conversa com o Pedro.",req:"c7",a:"...era brincadeira. A Luna é dramática.",unlocksClue:"c2"},
+    {q:"Por que usou o computador da biblioteca da escola?",req:"c10",a:"Quem te disse isso? *silêncio* Eu não queria que chegasse a esse ponto.",unlocksClue:"c15"},
+    {q:"Você sabia que a Luna estava sofrendo?",a:"Todo mundo sabia. Ninguém ligava.",unlocksClue:null}
+  ]},
+  {id:"s2",name:"Rafaela Melo",role:"Estudante · 9B",emoji:"💄",threat:"high",bio:"Ex-melhor amiga. Tornou-se agressora pública. 24 comentários ofensivos.",questions:[
+    {q:"Vocês não eram melhores amigas?",a:"Éramos. Aí ela ficou chata, querendo atenção demais.",unlocksClue:null},
+    {q:"Por que fez 24 comentários ofensivos?",req:"c8",a:"Foi o pessoal que começou. Eu só ri junto.",unlocksClue:"c8"},
+    {q:"Você sabia que ela queria desistir de tudo?",req:"c12",a:"Eu... eu não sabia que era tão sério.",unlocksClue:null}
+  ]},
+  {id:"s3",name:"Thiago Santos",role:"Estudante · 9B",emoji:"📹",threat:"high",bio:"Postou o vídeo viral no TikTok. 312 compartilhamentos.",questions:[
+    {q:"Você postou o vídeo da Luna?",a:"Foi só uma piada, cara.",unlocksClue:"c3"},
+    {q:"58 mil visualizações é piada?",req:"c3",a:"Eu não sabia que ia bombar. Quando vi, já tava tarde.",unlocksClue:null}
+  ]},
+  {id:"s4",name:"Kauã Pereira",role:"Estudante · 9B",emoji:"🎮",threat:"high",bio:"Comentários públicos ofensivos. Risadas constantes.",questions:[
+    {q:"Você participou das ofensas no grupo?",a:"Eu só mandei umas figurinhas. Não foi nada demais.",unlocksClue:null},
+    {q:"E os comentários nos posts dela?",req:"c1",a:"Cara, todo mundo fazia. Por que eu sou o vilão?",unlocksClue:null}
+  ]},
+  {id:"s5",name:"Letícia Ferreira",role:"Estudante · 9B",emoji:"📱",threat:"high",bio:"Primeira a compartilhar o vídeo viral. Multiplicou alcance.",questions:[
+    {q:"Por que compartilhou o vídeo?",a:"Pq era engraçado, oras.",unlocksClue:"c13"},
+    {q:"Sabe que isso é crime?",req:"c13",a:"Crime? Calma, eu só dei share.",unlocksClue:null}
+  ]},
+  {id:"s6",name:"Bia Almeida",role:"Estudante · 9B · Amiga",emoji:"🌸",threat:"low",bio:"Única amiga que apoiou Luna até o fim.",questions:[
+    {q:"Como Luna estava nos últimos meses?",a:"Destruída. Mas ela não queria preocupar a mãe. Eu tentei tudo.",unlocksClue:"c11"},
+    {q:"Vocês procuraram ajuda na escola?",a:"Sim. A coordenadora disse que era 'coisa de adolescente'. O diretor nunca respondeu.",unlocksClue:"c14"}
+  ]},
+  {id:"s7",name:"Camila Rocha",role:"Estudante · 9A",emoji:"📚",threat:"medium",bio:"Testemunha. Sabia do ocorrido mas não interveio.",questions:[
+    {q:"Você viu o que estavam fazendo com a Luna?",a:"Vi. Todo mundo viu. Mas se eu falasse, era a próxima.",unlocksClue:null}
+  ]},
+  {id:"s8",name:"Davi Lima",role:"Estudante · 9B",emoji:"😶",threat:"low",bio:"Membro do grupo. Não participou ativamente.",questions:[
+    {q:"Por que não disse nada?",a:"Eu não fiz parte. Mas... eu também não defendi ela. Eu sei.",unlocksClue:null}
+  ]},
+  {id:"s9",name:"Pedro Costa",role:"Estudante · 9B",emoji:"🎧",threat:"medium",bio:"Confidente de Gabriel. Sabia da conta @_anon.truth.",questions:[
+    {q:"Gabriel te contou sobre @_anon.truth?",a:"Eu... eu não sei do que você tá falando.",unlocksClue:null},
+    {q:"Temos as mensagens.",req:"c7",a:"Tá, ele contou. Mas eu não fiz nada! Eu só ouvi.",unlocksClue:"c7"}
+  ]},
+  {id:"s10",name:"Júlia Mendes",role:"Estudante · 9A",emoji:"📸",threat:"medium",bio:"Postou story repostando o vídeo viral.",questions:[
+    {q:"Por que repostou o story?",a:"Tava todo mundo postando. Achei que era uma trend.",unlocksClue:null}
+  ]},
+  {id:"s11",name:"Lucas Silva",role:"Estudante · 9B",emoji:"🤡",threat:"medium",bio:"Zombou da Luna publicamente em sala.",questions:[
+    {q:"Você ridicularizou a Luna na sala?",a:"Foi uma piada. Ela ria também... acho.",unlocksClue:null}
+  ]},
+  {id:"s12",name:"Marina Souza",role:"Estudante · 9B",emoji:"🙈",threat:"low",bio:"Sabia do ocorrido. Não denunciou.",questions:[
+    {q:"Você sabia de tudo?",a:"Sabia. Tinha medo de virar alvo se falasse algo.",unlocksClue:null}
+  ]},
+  {id:"s13",name:"Vinícius Oliveira",role:"Estudante · 9B",emoji:"🎤",threat:"low",bio:"Riu das ofensas no grupo.",questions:[
+    {q:"Você riu das piadas sobre a Luna?",a:"Ri. Eu sei que tava errado. Mas era todo mundo.",unlocksClue:null}
+  ]},
+  {id:"s14",name:"Sofia Castro",role:"Estudante · 9A",emoji:"👓",threat:"medium",bio:"Testemunha ocular de várias agressões.",questions:[
+    {q:"O que você viu nos corredores?",a:"Empurrões, risadas. A Rafaela jogou o caderno da Luna no chão.",unlocksClue:null}
+  ]},
+  {id:"s15",name:"Henrique Dias",role:"Estudante · 9B",emoji:"😏",threat:"medium",bio:"Espalhou rumores tóxicos sobre Luna.",questions:[
+    {q:"Você inventou os boatos sobre a Luna?",a:"Eu só repassei o que ouvi. Não fui eu que comecei.",unlocksClue:null}
+  ]},
+  {id:"s16",name:"Beatriz Cardoso",role:"Estudante · 9A",emoji:"💬",threat:"medium",bio:"Espalhou print manipulado em outros grupos.",questions:[
+    {q:"Você compartilhou o print editado?",a:"Compartilhei. Achei que era verdade.",unlocksClue:null}
+  ]},
+  {id:"s17",name:"Prof. Ricardo Alves",role:"Professor de História",emoji:"👔",threat:"medium",bio:"Presenciou bullying em sala mas não interveio.",questions:[
+    {q:"O senhor presenciou as ofensas?",a:"Vi algumas coisas. Sempre tentava distrair com a aula.",unlocksClue:null},
+    {q:"Reportou à direção?",a:"Reportei verbalmente. O diretor disse que eu deveria 'focar nas aulas'.",unlocksClue:"c14"}
+  ]},
+  {id:"s18",name:"Diretor Carlos Pinto",role:"Direção · EMEB Prof. Santos",emoji:"🏫",threat:"high",bio:"Recebeu denúncia formal por e-mail. Não agiu.",questions:[
+    {q:"O senhor recebeu o e-mail da Luna?",a:"Recebemos muitos e-mails. Não me lembro especificamente.",unlocksClue:null},
+    {q:"Há registro do e-mail no sistema da escola.",req:"c14",a:"...lembro vagamente. Achei que não era tão sério. Erro meu.",unlocksClue:"c14"}
+  ]},
+  {id:"s19",name:"Renata Barbosa",role:"Irmã mais velha",emoji:"💔",threat:"low",bio:"Irmã de Luna. Estava na faculdade em outra cidade.",questions:[
+    {q:"Você sabia do que estava acontecendo?",a:"Não. Ela escondia. Eu deveria ter percebido. *chora*",unlocksClue:null}
+  ]},
+  {id:"s20",name:"Felipe Nunes",role:"Estudante · 9C · Ex",emoji:"💔",threat:"medium",bio:"Ex-namorado breve. Encerrou a relação após pressão dos amigos.",questions:[
+    {q:"Por que terminou com a Luna?",a:"Pressão dos amigos. Eles falavam que eu ia perder status. Eu fui covarde.",unlocksClue:null}
+  ]}
+];
+
+const BOARD_NODES = [
+  {id:"luna",type:"victim",label:"LUNA",sub:"vítima",x:160,y:160},
+  {id:"gabriel",type:"suspect",label:"GABRIEL B.",sub:"@_anon.truth",x:20,y:40},
+  {id:"rafaela",type:"suspect",label:"RAFAELA M.",sub:"ex-amiga",x:250,y:40},
+  {id:"thiago",type:"suspect",label:"THIAGO S.",sub:"vídeo viral",x:20,y:280},
+  {id:"diretor",type:"suspect",label:"DIRETOR",sub:"omissão",x:250,y:280},
+  {id:"anon",type:"evidence",label:"@_anon.truth",sub:"conta anônima",x:80,y:160},
+  {id:"video",type:"evidence",label:"VÍDEO TIKTOK",sub:"312 shares",x:240,y:160}
+];
+
+const CONNECTIONS = [
+  {from:"gabriel",to:"anon",strong:true},
+  {from:"anon",to:"luna",strong:true},
+  {from:"thiago",to:"video",strong:true},
+  {from:"video",to:"luna",strong:true},
+  {from:"rafaela",to:"luna",strong:false},
+  {from:"diretor",to:"luna",strong:false},
+  {from:"gabriel",to:"rafaela",strong:false}
+];
+
+// ──── LOADING ────
+const LOAD_STEPS=[
+  {p:15,t:"VERIFICANDO CREDENCIAIS..."},{p:35,t:"DESCRIPTOGRAFANDO ARQUIVOS..."},
+  {p:55,t:"CARREGANDO EVIDÊNCIAS..."},{p:75,t:"INICIANDO PROTOCOLO..."},
+  {p:100,t:"SISTEMA PRONTO"}
+];
+function runLoading(){
+  let i=0;
+  const bar=document.getElementById("loading-bar"),txt=document.getElementById("loading-text");
+  const tick=()=>{
+    if(i>=LOAD_STEPS.length){
+      setTimeout(()=>{document.getElementById("loading-overlay").classList.add("hidden")},400);
+      return;
+    }
+    const s=LOAD_STEPS[i++];
+    bar.style.width=s.p+"%";txt.textContent=s.t;
+    setTimeout(tick,180);
+  };
+  tick();
+}
+
+// ──── CLOCK ────
+function updateClock(){
+  const d=new Date();
+  const hh=String(d.getHours()).padStart(2,"0"),mm=String(d.getMinutes()).padStart(2,"0");
+  const t=hh+":"+mm;
+  document.getElementById("clock-display").textContent=t;
+  document.getElementById("phone-time").textContent=t;
+  document.getElementById("lock-time").textContent=t;
+  const days=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+  const months=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+  document.getElementById("lock-date").textContent=days[d.getDay()]+", "+d.getDate()+" de "+months[d.getMonth()];
+}
+updateClock();
+setInterval(updateClock,1000);
+
+// ──── NAVIGATION ────
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+function showPanel(panel){
+  document.querySelectorAll(".content-panel").forEach(p=>p.classList.remove("active"));
+  document.getElementById("panel-"+panel).classList.add("active");
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
+  const el=document.getElementById("nav-"+panel);
+  if(el)el.classList.add("active");
+  if(panel==="analysis")setTimeout(renderBoard,50);
+  if(panel==="phone"){
+    const pb=document.getElementById("phone-badge");
+    if(pb)pb.style.display=STATE.phoneUnlocked?"none":"flex";
+    // BUG FIX: sempre vai para tela correta do celular ao entrar no painel
+    goHome();
+  }
+}
+function startGame(){showScreen("screen-briefing")}
+function enterMain(){
+  showScreen("screen-main");
+  renderTimeline();renderSuspects();renderClues();
+  renderChats();renderIG();renderNotes();renderGallery();renderContacts();renderTiktok();
+  // renderBoard só quando o painel analysis for aberto pela primeira vez (getBoundingClientRect correto)
+  setTimeout(()=>notify("SISTEMA","Bem-vindo, investigador. Acesse o celular para começar.","cyan"),600);
+}
+function restartGame(){
+  try{localStorage.removeItem("eclipse_save")}catch(e){}
+  STATE.pinInput="";STATE.phoneUnlocked=false;STATE.clues.clear();STATE.interrogated.clear();
+  STATE.currentSuspect=null;STATE.askedQuestions={};STATE.calcSecretFound=false;
+  document.querySelectorAll(".lock-pin-dot").forEach(d=>d.classList.remove("filled"));
+  document.getElementById("calc-secret").classList.remove("show");
+  // Resetar calculadora
+  _calcVal="0";_calcPrev=null;_calcOp=null;_calcJustEq=false;
+  document.getElementById("calc-result").textContent="0";
+  document.getElementById("calc-expr").textContent="";
+  // Voltar para lock screen sem chamar goHome no contexto errado
+  document.querySelectorAll(".phone-screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById("phone-lock").classList.add("active");
+  showPanel("dashboard");updateProgress();showScreen("screen-intro");
+}
+
+// ──── SAVE/LOAD ────
+function saveState(){
+  try{
+    localStorage.setItem("eclipse_save",JSON.stringify({
+      clues:Array.from(STATE.clues),interrogated:Array.from(STATE.interrogated),
+      asked:STATE.askedQuestions,unlocked:STATE.phoneUnlocked,calcSecret:STATE.calcSecretFound
+    }));
+  }catch(e){}
+}
+function loadState(){
+  try{
+    const s=JSON.parse(localStorage.getItem("eclipse_save"));
+    if(!s)return;
+    STATE.clues=new Set(s.clues||[]);
+    STATE.interrogated=new Set(s.interrogated||[]);
+    STATE.askedQuestions=s.asked||{};
+    STATE.phoneUnlocked=!!s.unlocked;
+    STATE.calcSecretFound=!!s.calcSecret;
+  }catch(e){}
+}
+
+function updateProgress(){
+  const cluesPct=STATE.clues.size/15*60;
+  const interPct=STATE.interrogated.size/20*40;
+  const total=Math.round(cluesPct+interPct);
+  document.getElementById("progress-fill").style.width=total+"%";
+  document.getElementById("progress-pct").textContent=total+"%";
+  document.getElementById("clue-counter").textContent="🔍 "+STATE.clues.size;
+  document.getElementById("stat-clues").textContent=STATE.clues.size;
+  document.getElementById("stat-interrogated").textContent=STATE.interrogated.size;
+  document.getElementById("stat-suspects").textContent=20-STATE.interrogated.size;
+  document.getElementById("stat-connections").textContent=Math.min(STATE.clues.size,7);
+  // Atualiza badge de pistas coletadas
+  const cb=document.getElementById("clues-badge");
+  if(cb){if(STATE.clues.size>0){cb.style.display="flex";cb.textContent=STATE.clues.size}else{cb.style.display="none"}}
+  // Atualiza stat-phone com pistas restantes no celular
+  const phoneClues=["c1","c2","c3","c4","c5","c6","c7","c8","c9","c10","c11","c12","c13","c14","c15"];
+  const remaining=phoneClues.filter(id=>!STATE.clues.has(id)).length;
+  const spEl=document.getElementById("stat-phone");
+  if(spEl)spEl.textContent=remaining;
+  saveState();
+}
+
+// ──── NOTIFICATION ────
+let notifTimer=null;
+function notify(app,text,color){
+  const colorMap={cyan:"cyan",green:"green",red:"red",amber:"amber",violet:"violet"};
+  const c=colorMap[color]||"cyan";
+  const n=document.getElementById("notification");
+  document.getElementById("notif-app").textContent=app;
+  document.getElementById("notif-text").textContent=text;
+  document.getElementById("notif-time").textContent="agora";
+  n.style.borderLeftColor="var(--neon-"+c+")";
+  n.style.borderColor="var(--neon-"+c+")";
+  n.classList.add("show");
+  clearTimeout(notifTimer);
+  notifTimer=setTimeout(()=>n.classList.remove("show"),4200);
+}
+
+// ──── MODAL ────
+function showModal(title,text,isClue){
+  document.getElementById("modal-title").textContent=title;
+  document.getElementById("modal-text").textContent=text;
+  document.getElementById("modal-badge").style.display=isClue?"inline-block":"none";
+  document.getElementById("modal-overlay").classList.add("show");
+}
+function closeModal(){document.getElementById("modal-overlay").classList.remove("show")}
+// Fechar modal tocando no overlay
+document.getElementById("modal-overlay").addEventListener("click",function(e){
+  if(e.target===this)closeModal();
+});
+
+// ──── CLUES ────
+function collectClue(id){
+  if(STATE.clues.has(id))return;
+  STATE.clues.add(id);
+  const c=CLUES_DATA[id];
+  notify("PISTA COLETADA",c.title,"cyan");
+  updateProgress();renderClues();
+  const ap=document.getElementById("panel-analysis");
+  if(ap&&ap.classList.contains("active"))renderBoard();
+}
+function renderClues(){
+  const grid=document.getElementById("clues-grid");
+  grid.innerHTML="";
+  Object.keys(CLUES_DATA).forEach((id,i)=>{
+    const c=CLUES_DATA[id],found=STATE.clues.has(id);
+    const card=document.createElement("div");
+    card.className="clue-card "+(found?"found":"locked");
+    card.innerHTML='<div class="clue-card-num">PISTA #'+String(i+1).padStart(2,"0")+'</div>'+
+      '<div class="clue-card-title">'+(found?c.title:"???")+'</div>'+
+      '<div class="clue-card-desc">'+(found?c.desc:"Continue investigando.")+'</div>'+
+      '<div class="clue-card-source">FONTE: '+(found?c.source:"—")+'</div>';
+    grid.appendChild(card);
+  });
+}
+
+// ──── DASHBOARD TIMELINE ────
+function renderTimeline(){
+  const c=document.getElementById("timeline-items");
+  c.innerHTML="";
+  TIMELINE.forEach(t=>{
+    const d=document.createElement("div");
+    d.className="timeline-item "+t.status;
+    d.innerHTML='<div class="timeline-dot"></div><div class="timeline-info"><div class="timeline-label">'+t.label+'</div><div class="timeline-sub">'+t.sub+'</div></div>';
+    c.appendChild(d);
+  });
+}
+
+// ──── PIN ────
+function enterPin(d){
+  if(STATE.pinInput.length>=4)return;
+  STATE.pinInput+=d;
+  document.getElementById("pin"+(STATE.pinInput.length-1)).classList.add("filled");
+  if(STATE.pinInput.length===4){
+    setTimeout(()=>{
+      if(STATE.pinInput===CORRECT_PIN){
+        STATE.phoneUnlocked=true;
+        document.getElementById("phone-badge").style.display="none";
+        notify("DISPOSITIVO","Celular desbloqueado. PIN aceito.","green");
+        collectClue("c5");
+        goHome();
+        saveState();
+      }else{
+        notify("DISPOSITIVO","PIN incorreto. Tente novamente.","red");
+        clearPin();
+      }
+    },240);
+  }
+}
+function clearPin(){
+  STATE.pinInput="";
+  document.querySelectorAll(".lock-pin-dot").forEach(d=>d.classList.remove("filled"));
+}
+
+// ──── PHONE NAVIGATION ────
+function showPhoneScreen(id){
+  document.querySelectorAll(".phone-screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+function goHome(){
+  if(!STATE.phoneUnlocked){showPhoneScreen("phone-lock");return}
+  showPhoneScreen("phone-home");
+}
+function openApp(app){
+  if(!STATE.phoneUnlocked){notify("DISPOSITIVO","Desbloqueie primeiro o aparelho.","amber");return}
+  showPhoneScreen("phone-"+app);
+}
+function tryEncrypted(){
+  showModal("Arquivo Criptografado","Este arquivo está protegido. Encontre todas as pistas para acessá-lo.\n\nDica: o segredo está na calculadora.",false);
+}
+
+// ──── WHATSAPP ────
+function renderChats(){
+  const list=document.getElementById("chat-list");
+  list.innerHTML="";
+  CHATS.forEach(c=>{
+    const d=document.createElement("div");
+    d.className="chat-item";
+    d.onclick=()=>openChat(c.id);
+    d.innerHTML='<div class="chat-avatar" style="background:'+c.color+'">'+c.avatar+'</div>'+
+      '<div class="chat-info"><div class="chat-name-row"><div class="chat-name">'+c.name+'</div><div class="chat-time">23:47</div></div>'+
+      '<div class="chat-preview-row"><div class="chat-preview">'+c.preview+'</div>'+(c.unread?'<div class="chat-unread">'+c.unread+'</div>':'')+'</div></div>';
+    list.appendChild(d);
+  });
+}
+function openChat(id){
+  const c=CHATS.find(x=>x.id===id);
+  if(!c)return;
+  document.getElementById("chat-view-name").textContent=c.name;
+  document.getElementById("chat-view-avatar").textContent=c.avatar;
+  document.getElementById("chat-view-avatar").style.background=c.color;
+  const m=document.getElementById("chat-view-messages");
+  m.innerHTML="";
+  c.messages.forEach(msg=>{
+    const div=document.createElement("div");
+    div.className="chat-msg "+msg.from+(msg.offensive?" offensive":"");
+    div.innerHTML=(msg.from==="them"?'<div style="font-size:10px;color:#a8e6cf;font-weight:700;margin-bottom:2px">'+msg.name+'</div>':'')+msg.text+'<div class="msg-time">'+msg.time+'</div>';
+    if(msg.clue){
+      div.onclick=()=>{collectClue(msg.clue);showModal(CLUES_DATA[msg.clue].title,CLUES_DATA[msg.clue].desc,true)};
+      div.style.cursor="pointer";
+      div.style.outline="1px dashed rgba(0,229,255,0.4)";
+    }
+    m.appendChild(div);
+  });
+  if(id==="escolagalera")collectClue("c1");
+  if(id==="bia")collectClue("c11");
+  showPhoneScreen("phone-chat-view");
+  setTimeout(()=>m.scrollTop=m.scrollHeight,50);
+}
+
+// ──── INSTAGRAM ────
+function renderIG(){
+  const feed=document.getElementById("ig-feed");
+  feed.innerHTML="";
+  IG_POSTS.forEach(p=>{
+    const div=document.createElement("div");
+    div.className="ig-post";
+    let html='<div class="ig-post-header"><div class="ig-avatar">'+p.avatar+'</div><div class="ig-username">'+p.user+'</div></div>'+
+      '<div class="ig-image">'+p.img+'</div>'+
+      '<div class="ig-actions"><span>❤️</span><span>💬</span><span>📤</span></div>'+
+      '<div class="ig-caption"><strong>'+p.user+'</strong> '+p.caption+'</div>'+
+      '<div class="ig-comment" style="color:#888">'+p.likes+' curtidas</div>';
+    p.comments.forEach(c=>{
+      html+='<div class="ig-comment'+(c.offensive?" offensive":"")+'" '+(c.clue?'data-clue="'+c.clue+'" style="cursor:pointer;text-decoration:underline dotted"':'')+'><strong>'+c.user+'</strong> '+c.text+'</div>';
+    });
+    div.innerHTML=html;
+    feed.appendChild(div);
+  });
+  feed.querySelectorAll("[data-clue]").forEach(el=>{
+    el.onclick=()=>{const id=el.getAttribute("data-clue");collectClue(id);showModal(CLUES_DATA[id].title,CLUES_DATA[id].desc,true)};
+  });
+}
+
+// ──── NOTES ────
+function renderNotes(){
+  const list=document.getElementById("notes-list");
+  list.innerHTML="";
+  NOTES.forEach(n=>{
+    const d=document.createElement("div");
+    d.className="note-item";
+    d.onclick=()=>openNote(n.id);
+    d.innerHTML='<div class="note-title">'+n.title+'</div><div class="note-date">'+n.date+'</div><div class="note-preview">'+n.preview+'</div>';
+    list.appendChild(d);
+  });
+}
+function openNote(id){
+  const n=NOTES.find(x=>x.id===id);
+  if(!n)return;
+  document.getElementById("note-view-h").textContent=n.title;
+  document.getElementById("note-view-body").textContent=n.body;
+  showPhoneScreen("phone-note-view");
+  if(n.clue)collectClue(n.clue);
+}
+
+// ──── GALLERY ────
+function renderGallery(){
+  const g=document.getElementById("gallery-grid");
+  g.innerHTML="";
+  GALLERY.forEach(it=>{
+    const d=document.createElement("div");
+    d.className="gallery-item"+(it.evidence?" evidence":"");
+    d.textContent=it.emoji;
+    d.onclick=()=>{
+      if(it.evidence){collectClue(it.clue);showModal(it.title,it.text,true)}
+      else showModal("Foto","Foto pessoal sem relevância à investigação.",false);
+    };
+    g.appendChild(d);
+  });
+}
+
+// ──── CONTACTS ────
+function renderContacts(){
+  const c=document.getElementById("contacts-list");
+  c.innerHTML="";
+  CONTACTS_DATA.forEach(ct=>{
+    const d=document.createElement("div");
+    d.className="contact-item";
+    if(ct.clue)d.onclick=()=>{collectClue(ct.clue);showModal(ct.name,ct.note,true)};
+    d.innerHTML='<div class="contact-avatar">'+ct.emoji+'</div><div class="contact-info"><div class="contact-name">'+ct.name+'</div><div class="contact-phone">'+ct.phone+'</div>'+(ct.note?'<div class="contact-note">'+ct.note+'</div>':'')+'</div>';
+    c.appendChild(d);
+  });
+}
+
+// ──── TIKTOK ────
+function renderTiktok(){
+  const f=document.getElementById("tiktok-feed");
+  f.innerHTML="";
+  TIKTOK_POSTS.forEach(p=>{
+    const d=document.createElement("div");
+    d.className="tt-post";
+    d.onclick=()=>{if(p.clue){collectClue(p.clue);showModal(CLUES_DATA[p.clue].title,CLUES_DATA[p.clue].desc,true)}};
+    d.innerHTML='<div class="tt-emoji">'+p.emoji+'</div>'+
+      '<div class="tt-info"><div class="tt-user">'+p.user+'</div><div class="tt-desc">'+p.desc+'</div></div>'+
+      '<div class="tt-stats"><div><div class="tt-stat-icon">❤️</div>'+p.likes+'</div><div><div class="tt-stat-icon">💬</div>'+p.comments+'</div><div><div class="tt-stat-icon">📤</div>'+p.views+'</div></div>';
+    f.appendChild(d);
+  });
+}
+
+// ──── CALCULATOR — reescrito sem bugs ────
+let _calcVal="0",_calcPrev=null,_calcOp=null,_calcJustEq=false;
+function _calcShow(){document.getElementById("calc-result").textContent=_calcVal}
+function _calcExprShow(t){document.getElementById("calc-expr").textContent=t}
+function calcInput(v){
+  if(!isNaN(v)||v==="."){
+    if(_calcJustEq){_calcVal="0";_calcJustEq=false}
+    if(v==="."&&_calcVal.includes("."))return;
+    _calcVal=(_calcVal==="0"&&v!==".")?v:_calcVal+v;
+  }else{
+    // operador: ÷ × - +
+    if(_calcOp&&_calcPrev!==null&&!_calcJustEq){
+      const r=_calcApply(_calcPrev,parseFloat(_calcVal),_calcOp);
+      _calcVal=_fmt(r);
+    }
+    _calcPrev=parseFloat(_calcVal);
+    _calcOp=v;
+    _calcJustEq=false;
+    _calcExprShow(_calcVal+" "+v);
+    _calcVal="0";
+  }
+  _calcShow();
+}
+function _calcApply(a,b,op){
+  if(op==="÷")return b===0?NaN:a/b;
+  if(op==="×")return a*b;
+  if(op==="-")return a-b;
+  if(op==="+")return a+b;
+  return b;
+}
+function _fmt(n){
+  if(!isFinite(n))return"Erro";
+  const s=String(parseFloat(n.toFixed(10)));
+  return s;
+}
+function calcFunc(f){
+  if(f==="AC"){_calcVal="0";_calcPrev=null;_calcOp=null;_calcJustEq=false;_calcExprShow("");_calcShow();return}
+  if(f==="+/-"){_calcVal=_fmt(parseFloat(_calcVal)*-1);_calcShow();return}
+  if(f==="%"){_calcVal=_fmt(parseFloat(_calcVal)/100);_calcShow();return}
+}
+function calcEquals(){
+  // BUG FIX: verifica o segredo — funciona tanto digitando 1808= direto quanto após operações
+  if(_calcVal==="1808"){
+    STATE.calcSecretFound=true;
+    document.getElementById("calc-secret-text").textContent="Gabriel B., Rafaela M., Thiago S., Kauã P., Letícia F. — Estes são os nomes. Eu sei quem foram. Mas ninguém vai acreditar em mim. — L.";
+    document.getElementById("calc-secret").classList.add("show");
+    collectClue("c6");
+    saveState();
+    _calcExprShow(_calcVal+" =");
+    return;
+  }
+  if(_calcOp&&_calcPrev!==null){
+    const b=parseFloat(_calcVal);
+    const r=_calcApply(_calcPrev,b,_calcOp);
+    _calcExprShow(_calcPrev+" "+_calcOp+" "+b+" =");
+    _calcVal=_fmt(r);
+    _calcPrev=null;_calcOp=null;_calcJustEq=true;
+    _calcShow();
+  }
+}
+
+// ──── SUSPECTS (mobile: abas) ────
+function switchSuspectsTab(tab){
+  document.querySelectorAll(".suspects-tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".suspects-panel").forEach(p=>p.classList.remove("active"));
+  document.getElementById("tab-"+tab).classList.add("active");
+  document.getElementById("suspects-panel-"+(tab==="list"?"list":"interr")).classList.add("active");
+}
+
+function renderSuspects(){
+  const list=document.getElementById("suspects-list");
+  list.innerHTML="";
+  SUSPECTS.forEach(s=>{
+    const d=document.createElement("div");
+    d.className="suspect-item"+(STATE.interrogated.has(s.id)?" interrogated":"");
+    d.setAttribute("data-sid",s.id);
+    d.onclick=()=>selectSuspect(s.id);
+    d.innerHTML='<div class="suspect-avatar">'+s.emoji+'</div>'+
+      '<div class="suspect-info"><div class="suspect-name">'+s.name+'</div><div class="suspect-role">'+s.role+'</div></div>'+
+      '<div class="threat-badge '+s.threat+'">'+s.threat.toUpperCase()+'</div>';
+    list.appendChild(d);
+  });
+}
+function selectSuspect(id){
+  const s=SUSPECTS.find(x=>x.id===id);
+  if(!s)return;
+  STATE.currentSuspect=id;
+  document.querySelectorAll(".suspect-item").forEach(el=>el.classList.remove("selected"));
+  const el=document.querySelector('[data-sid="'+id+'"]');
+  if(el)el.classList.add("selected");
+  document.getElementById("no-suspect-selected").style.display="none";
+  document.getElementById("interrogation-view").classList.add("show");
+  document.getElementById("interr-avatar").textContent=s.emoji;
+  document.getElementById("interr-name").textContent=s.name;
+  document.getElementById("interr-status").textContent=s.role;
+  const tb=document.getElementById("interr-threat");
+  tb.textContent="AMEAÇA: "+s.threat.toUpperCase();
+  tb.className="threat-badge "+s.threat;
+  renderQuestions(s);
+  renderInterrMessages(s);
+  // BUG FIX: troca para aba de interrogação automaticamente em mobile
+  switchSuspectsTab("interr");
+}
+function renderInterrMessages(s){
+  const m=document.getElementById("interr-messages");
+  m.innerHTML="";
+  const intro=document.createElement("div");
+  intro.className="interr-msg suspect";
+  intro.innerHTML='<div class="interr-msg-label">'+s.name.toUpperCase()+'</div>'+s.bio;
+  m.appendChild(intro);
+  const asked=STATE.askedQuestions[s.id]||[];
+  asked.forEach(idx=>{
+    const q=s.questions[idx];
+    const qm=document.createElement("div");
+    qm.className="interr-msg investigator";
+    qm.innerHTML='<div class="interr-msg-label">INVESTIGADOR</div>'+q.q;
+    m.appendChild(qm);
+    const am=document.createElement("div");
+    am.className="interr-msg suspect";
+    am.innerHTML='<div class="interr-msg-label">'+s.name.toUpperCase()+'</div>'+q.a;
+    m.appendChild(am);
+  });
+  setTimeout(()=>m.scrollTop=m.scrollHeight,50);
+}
+function renderQuestions(s){
+  const c=document.getElementById("question-options");
+  c.innerHTML="";
+  const asked=STATE.askedQuestions[s.id]||[];
+  s.questions.forEach((q,i)=>{
+    const b=document.createElement("button");
+    b.className="question-btn";
+    const locked=q.req&&!STATE.clues.has(q.req);
+    const already=asked.indexOf(i)>=0;
+    b.textContent=(locked?"🔒 [REQUER PISTA] ":"")+q.q;
+    b.disabled=locked||already;
+    b.onclick=()=>askQuestion(s.id,i);
+    c.appendChild(b);
+  });
+}
+function askQuestion(sid,idx){
+  if(!STATE.askedQuestions[sid])STATE.askedQuestions[sid]=[];
+  if(STATE.askedQuestions[sid].indexOf(idx)>=0)return;
+  STATE.askedQuestions[sid].push(idx);
+  STATE.interrogated.add(sid);
+  const s=SUSPECTS.find(x=>x.id===sid);
+  const q=s.questions[idx];
+  if(q.unlocksClue)collectClue(q.unlocksClue);
+  renderInterrMessages(s);renderQuestions(s);renderSuspects();updateProgress();
+}
+
+// ──── ANALYSIS BOARD — BUG FIX: touch support ────
+function renderBoard(){
+  const board=document.getElementById("analysis-board");
+  board.querySelectorAll(".node").forEach(n=>n.remove());
+  BOARD_NODES.forEach(n=>{
+    const d=document.createElement("div");
+    d.className="node "+n.type;
+    d.style.left=n.x+"px";d.style.top=n.y+"px";
+    d.innerHTML='<div class="node-label">'+n.label+'</div><div class="node-sub">'+n.sub+'</div>';
+    d.setAttribute("data-id",n.id);
+    makeDraggable(d);
+    board.appendChild(d);
+  });
+  drawConnections();
+}
+
+// BUG FIX: listeners globais de drag registrados UMA vez
+let _dragEl=null,_dragSX,_dragSY,_dragOX,_dragOY,_dragRAF=null;
+function _dragMove(cx,cy){
+  if(!_dragEl)return;
+  const nx=_dragOX+cx-_dragSX,ny=_dragOY+cy-_dragSY;
+  _dragEl.style.left=nx+"px";
+  _dragEl.style.top=ny+"px";
+  if(_dragRAF)return;
+  _dragRAF=requestAnimationFrame(()=>{drawConnections();_dragRAF=null});
+}
+document.addEventListener("mousemove",e=>{_dragMove(e.clientX,e.clientY)});
+document.addEventListener("mouseup",()=>{_dragEl=null});
+document.addEventListener("touchmove",e=>{
+  if(!_dragEl)return;
+  e.preventDefault();
+  const t=e.touches[0];
+  _dragMove(t.clientX,t.clientY);
+},{passive:false});
+document.addEventListener("touchend",()=>{_dragEl=null});
+
+// BUG FIX: suporte a touch events no drag
+function makeDraggable(el){
+  el.addEventListener("mousedown",e=>{
+    e.preventDefault();
+    _dragEl=el;_dragSX=e.clientX;_dragSY=e.clientY;
+    _dragOX=parseInt(el.style.left)||0;_dragOY=parseInt(el.style.top)||0;
+  });
+  el.addEventListener("touchstart",e=>{
+    e.preventDefault();
+    const t=e.touches[0];
+    _dragEl=el;_dragSX=t.clientX;_dragSY=t.clientY;
+    _dragOX=parseInt(el.style.left)||0;_dragOY=parseInt(el.style.top)||0;
+  },{passive:false});
+}
+
+function drawConnections(){
+  const svg=document.getElementById("connections");
+  svg.innerHTML="";
+  const board=document.getElementById("analysis-board");
+  const rect=board.getBoundingClientRect();
+  CONNECTIONS.forEach(c=>{
+    const a=board.querySelector('[data-id="'+c.from+'"]'),b=board.querySelector('[data-id="'+c.to+'"]');
+    if(!a||!b)return;
+    const ar=a.getBoundingClientRect(),br=b.getBoundingClientRect();
+    const x1=ar.left-rect.left+ar.width/2,y1=ar.top-rect.top+ar.height/2;
+    const x2=br.left-rect.left+br.width/2,y2=br.top-rect.top+br.height/2;
+    const line=document.createElementNS("http://www.w3.org/2000/svg","line");
+    line.setAttribute("x1",x1);line.setAttribute("y1",y1);
+    line.setAttribute("x2",x2);line.setAttribute("y2",y2);
+    line.setAttribute("stroke",c.strong?"#ff3b5c":"#3a4a6a");
+    line.setAttribute("stroke-width",c.strong?"2":"1");
+    line.setAttribute("stroke-dasharray",c.strong?"0":"4 3");
+    line.setAttribute("opacity",c.strong?"0.85":"0.4");
+    svg.appendChild(line);
+  });
+}
+
+// ──── FINAL ────
+function checkFinalCondition(){
+  if(STATE.clues.size<5||STATE.interrogated.size<3){
+    showModal("Investigação incompleta","Continue investigando. Você precisa de pelo menos 5 pistas e 3 suspeitos interrogados para concluir o caso.\n\nProgresso atual: "+STATE.clues.size+" pistas, "+STATE.interrogated.size+" interrogados.",false);
+    return;
+  }
+  document.getElementById("fs-clues").textContent=STATE.clues.size;
+  document.getElementById("fs-suspects").textContent=STATE.interrogated.size;
+  const pct=Math.round((STATE.clues.size/15*60)+(STATE.interrogated.size/20*40));
+  document.getElementById("fs-pct").textContent=pct+"%";
+  let txt="Investigação concluída. Você reconstituiu os eventos que levaram ao caso de Luna Carvalho.";
+  if(pct>=85)txt="Caso completamente resolvido. Todos os responsáveis identificados. Justiça poderá ser feita.";
+  else if(pct>=60)txt="Investigação substancial concluída. Principais responsáveis identificados.";
+  document.getElementById("final-text").textContent=txt;
+  showScreen("screen-final");
+}
+
+// ──── BOOT ────
+window.addEventListener("load",()=>{
+  runLoading();
+  loadState();
+  updateProgress();
+  if(STATE.phoneUnlocked){
+    document.getElementById("phone-badge").style.display="none";
+  }
+  window.addEventListener("resize",drawConnections);
+  if(STATE.calcSecretFound){
+    document.getElementById("calc-secret-text").textContent="Gabriel B., Rafaela M., Thiago S., Kauã P., Letícia F. — Estes são os nomes. Eu sei quem foram. Mas ninguém vai acreditar em mim. — L.";
+    document.getElementById("calc-secret").classList.add("show");
+  }
+});
+</script>
+</body>
+</html>
